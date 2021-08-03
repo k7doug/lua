@@ -808,9 +808,8 @@ struct gLuaTrait<glm::vec<D, T>> : gLuaTraitCommon<T, glm::vec<D, T>> {
 
 template<typename T>
 struct gLuaTrait<glm::qua<T>> : gLuaTraitCommon<T, glm::qua<T>> {
-
   LUA_TRAIT_QUALIFIER bool Is(const gLuaBase &LB, int idx) { return glm_isquat(LB.L, idx); }
-  LUA_TRAIT_QUALIFIER GLM_CONSTEXPR glm::qua<T> zero() { return glm::qua<T>(1, 0, 0, 0); }
+  LUA_TRAIT_QUALIFIER GLM_CONSTEXPR glm::qua<T> zero() { return glm::quat_identity<glm_Float, glm::defaultp>(); }
   static GLM_CONSTEXPR const char *Label() { return LABEL_QUATERN; }
 };
 

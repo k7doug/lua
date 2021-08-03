@@ -584,9 +584,16 @@ namespace glm {
     const T bx2 = m[0][1] * aabb.maxPoint.x;
     const T ay2 = m[1][1] * aabb.minPoint.y;
     const T by2 = m[1][1] * aabb.maxPoint.y;
+
+    T ox = T(0), oy = T(0);
+    GLM_IF_CONSTEXPR(m.length() > 3) {
+      ox = m[3][0];
+      oy = m[3][1];
+    }
+
     return AABB<2, T, Q>(
-    vec<2, T, Q>(min(ax, bx) + min(ay, by) + m[3][0], min(ax2, bx2) + min(ay2, by2) + m[3][1]),
-    vec<2, T, Q>(max(ax, bx) + max(ay, by) + m[3][0], max(ax2, bx2) + max(ay2, by2) + m[3][1]));
+    vec<2, T, Q>(min(ax, bx) + min(ay, by) + ox, min(ax2, bx2) + min(ay2, by2) + oy),
+    vec<2, T, Q>(max(ax, bx) + max(ay, by) + ox, max(ax2, bx2) + max(ay2, by2) + oy));
   }
 
   /// <summary>
