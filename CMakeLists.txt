@@ -475,7 +475,6 @@ OPTION(GRIT_COMPAT_IPAIRS "Reintroduce compatibility for the ``__ipairs`` metame
 OPTION(GRIT_POWER_DEFER "Enable the defer statement" OFF)
 OPTION(GRIT_POWER_DEFER_OLD "Import func2close from ltests.h into the base library as `defer`" ON)
 OPTION(GRIT_POWER_JOAAT "Enable compile time Jenkins' one-at-a-time hashing" ON)
-OPTION(GRIT_POWER_PRELOADLIBS "Allow the preloading of libraries via command line arguments." ON)
 OPTION(GRIT_POWER_COMPOUND "Add compound operators (+=, -=, *=, /=, <<=, >>=, &=, |=, and ^=) to the language." ON)
 OPTION(GRIT_POWER_INTABLE "Support for unpacking named values from tables using the in keyword" ON)
 OPTION(GRIT_POWER_TABINIT "Syntactic sugar to improve the syntax for specifying sets" ON)
@@ -520,10 +519,6 @@ ENDIF()
 
 IF( GRIT_COMPAT_IPAIRS )
   ADD_COMPILE_DEFINITIONS(GRIT_COMPAT_IPAIRS)
-ENDIF()
-
-IF( GRIT_POWER_PRELOADLIBS )
-  ADD_COMPILE_DEFINITIONS(GRIT_POWER_PRELOADLIBS)
 ENDIF()
 
 IF( GRIT_POWER_COMPOUND )
