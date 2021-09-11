@@ -124,7 +124,7 @@ extern LUA_API_LINKAGE {
 /// global_State pointer is superior to a precondition that requires updating
 /// l_alloc and l_ud whenever the userdata is parsed.
 ///
-/// External libraries must follow LuaCrtAllocator.
+/// External libraries must copy LuaCrtAllocator.
 /// </summary>
 template<class T>
 struct InternalLuaCrtAllocator {

@@ -123,7 +123,7 @@ namespace glm {
   template<length_t C, length_t R, typename T, qualifier Q>
   GLM_FUNC_QUALIFIER GLM_CONSTEXPR vec<3, T, Q> transformDir(const mat<C, R, T, Q> &m, const vec<3, T, Q> &v) {
     GLM_STATIC_ASSERT(C >= 3 && R >= 3, "invalid direction transform");
-    const typename mat<C, R, T, Q>::col_type &result = m * vec<4, T, Q>(v, T(0));
+    const typename mat<C, R, T, Q>::col_type result = m * vec<4, T, Q>(v, T(0));
     return vec<3, T, Q>(result.x, result.y, result.z);
   }
 

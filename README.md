@@ -170,11 +170,15 @@ vec3(70.000000, -0.000000, 0.000000)
 > slerp(m:toQuat(), m2:toQuat(), 2/glm.pi)
 quat(0.877641, {0.479318, 0.000000, 0.000000})
 
--- Other examples:
-> aspect = 4.0 / 3.0
-> viewMatrix = glm.lookAt(glm.vec3(0.3, 0.3, 1.5), glm.vec3(0, 0, 0), glm.vec3(0, 1, 0))
-> perspective = glm.perspective(glm.radians(55.0), aspect, 0.1, 100.0)
-> frustum = glm.frustum(-aspect * 0.1, aspect * 0.1, -0.1, 0.1, 0.1, 100.0)
+-- Example ported from https://github.com/g-truc/glm/blob/master/readme.md
+function camera(Translate, Rotate)
+    local Projection = glm.perspective(glm.pi * 0.25, 4.0 / 3.0, 0.1, 100.0)
+    local View = glm.translate(glm.mat4(1.0), glm.vec3(0.0, 0.0, -Translate))
+    View = glm.rotate(View, Rotate.y, glm.vec3(-1.0, 0.0, 0.0))
+    View = glm.rotate(View, Rotate.x, glm.vec3(0.0, 1.0, 0.0))
+    local Model = glm.scale(glm.mat4(1.0), glm.vec3(0.5))
+    return Projection * View * Model
+end
 ```
 
 The binding library also extends GLM to:
