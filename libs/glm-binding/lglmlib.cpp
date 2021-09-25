@@ -1,6 +1,17 @@
 /*
 ** $Id: lglmlib.cpp $
 ** GLM binding library
+**
+** Porting GLM-specific code between luaglm and cpp should be painless (or as
+** painless as possible). With key differences being:
+**  1. Static versus Dynamic typing (or 'auto' versus 'local' syntax);
+**  2. Namespace resolution (::) versus table access (.) syntax. However, the
+**    'GRIT_POWER_NAMESPACE_SEL' build option removes this case at the cost of
+**    'goto' no longer being a language feature.
+**  3. Constants in luaglm are stored by value, e.g. glm.pi. However in cpp,
+**    they are templated constant expressions, e.g., glm::pi<float>().
+**  4. Floating-point literals (1.0f) vs. lua_Number (1.0).
+**
 ** See Copyright Notice in lua.h
 */
 
@@ -70,40 +81,6 @@ static void glm_newmetatable(lua_State *L, const char *meta_name, const char *li
 }
 #endif
 
-// Copy constructors from lbaselib.c.
-//
-// Porting GLM-specific code between luaglm and cpp should be painless (or as
-// painless as possible). With key differences being:
-//  1. Static versus Dynamic typing (or 'auto' versus 'local' syntax);
-//  2. Namespace resolution (::) versus table access (.) syntax. However, the
-//    'GRIT_POWER_NAMESPACE_SEL' build option removes this case at the cost of
-//    'goto' no longer being a language feature.
-//  3. Constants in luaglm are stored by value, e.g. glm.pi. However in cpp,
-//    they are templated constant expressions, e.g., glm::pi<float>().
-//  4. Floating-point literals (1.0f) vs. lua_Number (1.0).
-struct glm_Constructor {
-  const char *baseName;
-  const char *glmName;
-};
-
-static const glm_Constructor luaglm_constructors[] = {
-  { "vec1", "vec1" },
-  { "vec2", "vec2" },
-  { "vec3", "vec3" },
-  { "vec4", "vec4" },
-  { "mat2x2", "mat2x2" }, { "mat2x2", "mat2" },
-  { "mat2x3", "mat2x3" },
-  { "mat2x4", "mat2x4" },
-  { "mat3x2", "mat3x2" },
-  { "mat3x3", "mat3x3" }, { "mat3x3", "mat3" },
-  { "mat3x4", "mat3x4" },
-  { "mat4x2", "mat4x2" },
-  { "mat4x3", "mat4x3" },
-  { "mat4x4", "mat4x4" }, { "mat4x4", "mat4" },
-  { "qua", "qua" },
-  { GLM_NULLPTR, GLM_NULLPTR }
-};
-
 static const luaL_Reg luaglm_lib[] = {
   /* API */
   #include "lglmlib_reg.hpp"
@@ -167,7 +144,7 @@ extern "C" {
     // The "polygon" API is a reference to the polygon metatable stored in the registry.
     glm_newmetatable(L, LUA_GLM_POLYGON_META, "polygon", luaglm_polylib);
 #endif
-  #if defined(CONSTANTS_HPP) || defined(EXT_SCALAR_CONSTANTS_HPP)
+#if defined(CONSTANTS_HPP) || defined(EXT_SCALAR_CONSTANTS_HPP)
     GLM_CONSTANT(L, cos_one_over_two);
     GLM_CONSTANT(L, e);
     GLM_CONSTANT(L, epsilon);
@@ -198,7 +175,7 @@ extern "C" {
     GLM_CONSTANT(L, two_thirds);
     GLM_CONSTANT(L, zero);
     GLM_CONSTANT(L, epsilon);
-  #endif
+#endif
     GLM_CONSTANT(L, pi); /* lmathlib */
     lua_pushnumber(L, glm::epsilon<glm_Number>()); lua_setfield(L, -2, "eps");
     lua_pushnumber(L, static_cast<glm_Number>(glm::epsilon<glm_Float>())); lua_setfield(L, -2, "feps");
@@ -237,13 +214,6 @@ extern "C" {
     lua_pushvalue(L, -1);
     lua_setglobal(L, LUA_MATHLIBNAME);
 #endif
-
-    /* Copy global constructors */
-    const glm_Constructor *c = luaglm_constructors;
-    for (; c->baseName != GLM_NULLPTR; c++) {
-      lua_getglobal(L, c->baseName);
-      lua_setfield(L, -2, c->glmName);
-    }
 
     /* Setup default metatables */
     lua_lock(L);

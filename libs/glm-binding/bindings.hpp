@@ -195,6 +195,9 @@ struct gLuaBase {
 
   /// <summary>
   /// Temporary math.random() hook
+  ///
+  /// @TODO: Remove this function when math.random/std:rand functions are unified
+  /// and have proper bindings.
   /// </summary>
   lua_Number rand() {
     const int t = top();  // Get cached top;
@@ -338,6 +341,9 @@ struct gLuaBase {
       case LUA_VFALSE: v = static_cast<T>(0); break;
       case LUA_VNUMINT: v = static_cast<T>(ivalue(o)); break;
       case LUA_VNUMFLT: v = static_cast<T>(fltvalue(o)); break;
+      // string coercion must exist for this binding to be a superset of lmathlib.
+      // As much of the luaL_checknumber logic is redundant, this should be optimized.
+      // However, luaV_tonumber_ is not an exported function.
       default: {
         v = static_cast<T>(luaL_checknumber(L_, idx_));
         break;
@@ -723,15 +729,16 @@ struct gLuaBase {
 #define AS_TYPE2(Tr, Type) Tr::as_type<Type>
 
 template<typename V, typename T = V>
-struct gLuaTraitCommon;
+struct gTraitCommon;
 
 template<typename T>
 struct gLuaTrait;
 
 /// <summary>
+/// Shared functions for parsing types from the Lua stack.
 /// </summary>
 template<typename V, typename T>
-struct gLuaTraitCommon : glm::type<T> {
+struct gLuaSharedTrait : glm::type<T> {
   using type = T;
   using value_type = V;
 
@@ -779,12 +786,12 @@ struct gLuaTraitCommon : glm::type<T> {
 };
 
 template<typename T>
-struct gLuaTrait : gLuaTraitCommon<T, T> {
+struct gLuaTrait : gLuaSharedTrait<T, T> {
   template<typename Type = T> using as_type = gLuaTrait<Type>;
 };
 
 template<glm::length_t D, typename T>
-struct gLuaTrait<glm::vec<D, T>> : gLuaTraitCommon<T, glm::vec<D, T>> {
+struct gLuaTrait<glm::vec<D, T>> : gLuaSharedTrait<T, glm::vec<D, T>> {
   template<typename Type = T>
   using as_type = gLuaTrait<glm::vec<D, Type>>;
 
@@ -807,14 +814,14 @@ struct gLuaTrait<glm::vec<D, T>> : gLuaTraitCommon<T, glm::vec<D, T>> {
 };
 
 template<typename T>
-struct gLuaTrait<glm::qua<T>> : gLuaTraitCommon<T, glm::qua<T>> {
+struct gLuaTrait<glm::qua<T>> : gLuaSharedTrait<T, glm::qua<T>> {
   LUA_TRAIT_QUALIFIER bool Is(const gLuaBase &LB, int idx) { return glm_isquat(LB.L, idx); }
   LUA_TRAIT_QUALIFIER GLM_CONSTEXPR glm::qua<T> zero() { return glm::quat_identity<glm_Float, glm::defaultp>(); }
   static GLM_CONSTEXPR const char *Label() { return LABEL_QUATERN; }
 };
 
 template<glm::length_t C, glm::length_t R, typename T>
-struct gLuaTrait<glm::mat<C, R, T>> : gLuaTraitCommon<T, glm::mat<C, R, T>> {
+struct gLuaTrait<glm::mat<C, R, T>> : gLuaSharedTrait<T, glm::mat<C, R, T>> {
   template<glm::length_t RNext>
   using mul_type = gLuaTrait<glm::mat<RNext, C, T>>;
   using col_type = gLuaTrait<glm::vec<R, T>>;
@@ -935,8 +942,7 @@ struct gLuaEps : gLuaTrait<T> {
 **  (3) Convert the function result back into something suitable for Lua and it
 **      onto the Lua stack: "gLuaBase::Push(LB, ...)"
 **
-** @NOTE: Must consider the evaluation of function arguments; these undefined
-**  or unspecified depending on the C++ standard.
+** @NOTE: Must consider the evaluation of function arguments.
 */
 
 #define _VA_NARGS_GLUE(x, y) x y

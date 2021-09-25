@@ -15,12 +15,21 @@
 #include "bindings.hpp"
 
 /// <summary>
+/// Enum of different iterator types. This is more efficient than if this was calculated at runtime, at the cost of needing to update this to add new iterators.
+/// <summary>
+enum struct glmIteratorType {
+  Stack,
+  Array
+};
+
+/// <summary>
 /// Base Iterator Interface
 /// </summary>
 template<typename Trait>
 class glmLuaIterator : public gLuaBase {
 protected:
   virtual bool isEqual(const glmLuaIterator<Trait> &obj) const = 0;
+  virtual glmIteratorType getId() const = 0; // This is in the vtable so we don't add any more fields.
 
 public:
   glmLuaIterator(lua_State *L_, int idx_ = 1)
@@ -50,12 +59,12 @@ public:
 
 template<typename Trait>
 bool operator==(const glmLuaIterator<Trait> &lhs, const glmLuaIterator<Trait> &rhs) {
-  return typeid(lhs) == typeid(rhs) && lhs.isEqual(rhs);
+  return lhs.getId() == rhs.getId() && lhs.isEqual(rhs);
 }
 
 template<typename Trait>
 bool operator!=(const glmLuaIterator<Trait> &lhs, const glmLuaIterator<Trait> &rhs) {
-  return typeid(lhs) == typeid(rhs) && !lhs.isEqual(rhs);
+  return lhs.getId() != rhs.getId() || !lhs.isEqual(rhs);
 }
 
 /// <summary>
@@ -115,6 +124,12 @@ public:
     bool isEqual(const glmLuaIterator<Tr> &obj) const override {
       const Iterator<Tr> &other = static_cast<const Iterator<Tr> &>(obj);
       return (gLuaBase::idx == other.idx) || (!valid() && !other.valid());
+    }
+
+    /// <summary>
+    /// </summary>
+    glmIteratorType getId() const override {
+      return glmIteratorType::Stack;
     }
   };
 
@@ -200,6 +215,12 @@ public:
     bool isEqual(const glmLuaIterator<Tr> &obj) const override {
       const Iterator<Tr> &other = static_cast<const Iterator<Tr> &>(obj);
       return (arrayIdx == other.arrayIdx) || (!valid() && !other.valid());
+    }
+
+    /// <summary>
+    /// </summary>
+    glmIteratorType getId() const override {
+      return glmIteratorType::Array;
     }
 
     typename Tr::type operator*() const {

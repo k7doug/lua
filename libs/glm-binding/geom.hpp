@@ -99,7 +99,7 @@ struct gLuaRelative : gLuaTrait<T> {
 };
 
 template<glm::length_t L = 3, typename T = glm_Float>
-struct gLuaAABB : gLuaTraitCommon<T, glm::AABB<L, T>> {
+struct gLuaAABB : gLuaSharedTrait<T, glm::AABB<L, T>> {
   using Point = gLuaTrait<typename glm::AABB<L, T>::Point>;
 
   static GLM_CONSTEXPR const char *Label() { return "AABB"; }
@@ -110,7 +110,7 @@ struct gLuaAABB : gLuaTraitCommon<T, glm::AABB<L, T>> {
 };
 
 template<glm::length_t L = 3, typename T = glm_Float>
-struct gLuaLine : gLuaTraitCommon<T, glm::Line<L, T>> {
+struct gLuaLine : gLuaSharedTrait<T, glm::Line<L, T>> {
   using Point = gLuaTrait<typename glm::Line<L, T>::Point>;
   using Near = gLuaRelative<true, false, T>;
   using Far = gLuaRelative<false, false, T>;
@@ -123,7 +123,7 @@ struct gLuaLine : gLuaTraitCommon<T, glm::Line<L, T>> {
 };
 
 template<glm::length_t L = 3, typename T = glm_Float>
-struct gLuaSegment : gLuaTraitCommon<T, glm::LineSegment<L, T>> {
+struct gLuaSegment : gLuaSharedTrait<T, glm::LineSegment<L, T>> {
   using Point = gLuaTrait<typename glm::LineSegment<L, T>::Point>;
   using Near = gLuaRelative<true, true, T>;
   using Far = gLuaRelative<false, true, T>;
@@ -136,7 +136,7 @@ struct gLuaSegment : gLuaTraitCommon<T, glm::LineSegment<L, T>> {
 };
 
 template<glm::length_t L = 3, typename T = glm_Float>
-struct gLuaRay : gLuaTraitCommon<T, glm::Ray<L, T>> {
+struct gLuaRay : gLuaSharedTrait<T, glm::Ray<L, T>> {
   using Point = gLuaTrait<typename glm::Ray<L, T>::Point>;
   using Near = gLuaRelative<true, true, T>;
   using Far = gLuaRelative<false, false, T>;
@@ -149,7 +149,7 @@ struct gLuaRay : gLuaTraitCommon<T, glm::Ray<L, T>> {
 };
 
 template<glm::length_t L = 3, typename T = glm_Float>
-struct gLuaSphere : gLuaTraitCommon<T, glm::Sphere<L, T>> {
+struct gLuaSphere : gLuaSharedTrait<T, glm::Sphere<L, T>> {
   using Point = gLuaTrait<typename glm::Sphere<L, T>::Point>;
 
   static GLM_CONSTEXPR const char *Label() { return "Sphere"; }
@@ -160,7 +160,7 @@ struct gLuaSphere : gLuaTraitCommon<T, glm::Sphere<L, T>> {
 };
 
 template<glm::length_t L = 3, typename T = glm_Float>
-struct gLuaPlane : gLuaTraitCommon<T, glm::Plane<L, T>> {
+struct gLuaPlane : gLuaSharedTrait<T, glm::Plane<L, T>> {
   using Point = gLuaTrait<typename glm::Plane<L, T>::Point>;
 
   static GLM_CONSTEXPR const char *Label() { return "Plane"; }
@@ -177,7 +177,7 @@ struct gLuaPlane : gLuaTraitCommon<T, glm::Plane<L, T>> {
 ///   userdata also storing the dimensionality to each point.
 /// </summary>
 template<typename T = glm_Float>
-struct gLuaPolygon : gLuaTraitCommon<T, glm::Polygon<3, T>> {
+struct gLuaPolygon : gLuaSharedTrait<T, glm::Polygon<3, T>> {
   using Point = gLuaTrait<typename glm::Polygon<3, T>::Point>;
 
   static GLM_CONSTEXPR const char *Label() { return "Polygon"; }
@@ -754,12 +754,11 @@ GLM_BINDING_QUALIFIER(sphere_optimalEnclosingSphere) {
     case 3: TRAITS_FUNC(LB, glm::optimalEnclosingSphere, gLuaVec3<>, gLuaVec3<>, gLuaVec3<>); break;
     case 4: TRAITS_FUNC(LB, glm::optimalEnclosingSphere, gLuaVec3<>, gLuaVec3<>, gLuaVec3<>, gLuaVec3<>); break;
     default: {
-      InternalLuaCrtAllocator<gLuaVec3<>::type> allocator(LB.L);
       using List = glm::List<gLuaVec3<>::type>;
 
       // @TODO: This implementation is UNSAFE. Create a glm::List userdata that
       // is temporarily anchored onto the stack for the duration of the function
-      List pts(allocator);
+      List pts;
       auto push_back = [&pts](const gLuaVec3<>::type &v) { pts.push_back(v); };
 
       if (lua_istable(LB.L, LB.idx))
@@ -1183,16 +1182,15 @@ GLM_BINDING_QUALIFIER(polygon_new) {
   // Setup metatable.
   if (luaL_getmetatable(LB.L, LUA_GLM_POLYGON_META) == LUA_TTABLE) { // [..., poly, meta]
     lua_setmetatable(LB.L, -2);  // [..., poly]
+    LuaCrtAllocator<gLuaPolygon<>::Point::type> allocator(LB.L);
 
     // Create a std::vector backed by the Lua allocator.
     using PolyList = glm::List<gLuaPolygon<>::Point::type>;
-    InternalLuaCrtAllocator<gLuaPolygon<>::Point::type> allocator(LB.L);
     PolyList *list = static_cast<PolyList*>(allocator.realloc(GLM_NULLPTR, 0, sizeof(PolyList)));
 
     // Populate the polygon with an array of coordinates, if one exists.
     try {
-      ::new(list) PolyList(allocator);
-      polygon->p = list;
+      polygon->p = ::new(list) PolyList();
 
       if (top >= 1 && lua_istable(LB.L, LB.idx)) {
         const auto e = glmLuaArray::end<gLuaVec3<>>(LB.L, LB.idx);
@@ -1229,7 +1227,7 @@ GLM_BINDING_QUALIFIER(polygon_to_string) {
 GLM_BINDING_QUALIFIER(polygon__gc) {
   gLuaPolygon<>::type *ud = reinterpret_cast<gLuaPolygon<>::type *>(luaL_checkudata(L, 1, LUA_GLM_POLYGON_META));
   if (ud->p != GLM_NULLPTR) {
-    InternalLuaCrtAllocator<void> allocator(L);
+    LuaCrtAllocator<void> allocator(L);
     ud->p->~vector();  // Invoke destructor.
     allocator.realloc(ud->p, sizeof(glm::List<gLuaPolygon<>::Point::type>), 0);  // Free allocation
     ud->p = GLM_NULLPTR;

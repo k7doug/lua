@@ -1233,7 +1233,7 @@ LUA_API int lua_isvector (lua_State *L, int idx, int flags) {
 LUA_API int lua_tovector (lua_State *L, int idx, int flags, lua_Float4 *f4) {
   const TValue *o = glm_index2value(L, idx);
 
-  glmVector v;
+  glmVector v(glm::vec<4, glm_Float>(0));
   lu_byte variant = LUA_TNIL;
   if (ttisvector(o)) {
     v = glm_vvalue(o);

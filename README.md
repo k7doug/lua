@@ -437,13 +437,6 @@ result = utf8.strcmputf8i(stringLH, stringRH)
 
 ```
 
-#### Library Preloading:
-Allow the preloading of libraries, e.g., ``lib = require('...')``, via command line arguments.
-```bash
-# Preload a JSON library (stored at _G.rapidjson) and msgpack library (stored at _G.msgpack)
-./lua -lglm -lrapidjson -lmsgpack=cmsgpack
-```
-
 #### Readline History:
 Keep a persistent list of commands that have been run on the Lua interpreter. With the `LUA_HISTORY` environment variable used to declare the location history.
 
@@ -453,6 +446,9 @@ As of [LinkCommitHere](...), LuaGLM can only be compiled as C++ code.
 ### Make
 An modified version of the makefile [bundled](https://www.lua.org/download.html) with release versions of Lua. The same instructions apply:
 ```bash
+# Ensure the GLM library is initialized
+└> git submodule update --init
+
 # Build for the linux platform target, linked with readline;
 └> make linux-readline
 
@@ -467,6 +463,8 @@ An modified version of the makefile [bundled](https://www.lua.org/download.html)
 A CMake project that builds the stand-alone interpreter (`lua`), a compiler (`luac`), the GLM binding library, and shared/static libraries. This project includes variables for most preprocessor configuration flags supported by Lua and GLM. See `cmake -LAH` or [cmake-gui](https://cmake.org/runningcmake/) for the complete list of build options.
 
 ```bash
+└> git submodule update --init
+
 # Create build directory
 └> mkdir -p build ; cd build
 
@@ -584,11 +582,10 @@ Ordered by priority.
 1. Add support for two-dimensional geometrical structures: Ray2D, Line2D, Plane2D.
 1. Optimize `glm_createMatrix`. Profiling case '4x4 matrix creation (lua_Alloc)' is the one of the slowest operations in the added vector/matrix API. Worse when using the default Windows allocator.
 1. Optimize runtime swizzling: `swizzle` and `glmVec_get`. It is likely possible to improve this operation by 15/20 percent.
-1. Improve build scripts for linking against custom allocators. [rpmalloc](https://github.com/gottfriedleibniz/rpmalloc/tree/lua) has shown significant upsides for cases of tight loops that allocate many matrix objects. For example, an internal profiling case '4x4 matrix - 4 component matrix * matrix' (using TM_MUL; generational GC enabled) halved its execution time by using a custom allocator.
 1. Improve support for `glm::mat3x4` and `glm::mat4x3`.
 1. `glmMat_set` support for tables, e.g., `mat[i] = { ... }`, by using `glmH_tovector`.
-1. Fix/improve MSVC portions of CMakeLists.
 1. Features/configurations to reduce size of binding library.
+1. Consider replacing the 'blob' variant with an FFI library: advanced use is required.
 1. Include GLM version control in binding library to support older GLM versions.
 
 ## Benchmarking

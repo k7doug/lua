@@ -728,9 +728,7 @@ namespace glm {
         break;
     }
 
-    // The set of supporting points for the minimal sphere. Even though the
-    // minimal enclosing sphere might have 2, 3 or 4 points in its support
-    // (sphere surface), always store here indices to exactly four points.
+    // The set of supporting points for the minimal sphere.
     size_t sp[4] = { 0, 1, 2, 3 };
     bool expendable[4] = { true, true, true, true };
 
@@ -740,8 +738,8 @@ namespace glm {
       if (i == sp[0] || i == sp[1] || i == sp[2] || i == sp[3])
         continue;
 
-      // If the next point (pts[i]) does not fit inside the currently computed
-      // minimal sphere, compute a new minimal sphere that also contains pts[i].
+      // If the next point does not fit inside the currently computed minimal
+      // sphere, compute a new minimal sphere that also contains pts[i].
       if (distance2(pts[i], s.pos) > rSq) {
         int redundant = 0;
         s = optimalEnclosingSphere(pts[sp[0]], pts[sp[1]], pts[sp[2]], pts[sp[3]], pts[i], redundant);

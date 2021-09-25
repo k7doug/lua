@@ -20,7 +20,7 @@ namespace glm {
   /// </summary>
   /// <typeparam name="T"></typeparam>
   template<typename T>
-  using List = std::vector<T, InternalLuaCrtAllocator<T>>;
+  using List = std::vector<T>;
 
   /// <summary>
   /// Describes the thickness of the polygon (i.e., how the third dimension

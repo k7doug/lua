@@ -152,7 +152,7 @@ $(LUAC_T): $(LUAC_O) $(LUA_A)
 	$(CC) -o $@ $(LDFLAGS) $(LUAC_O) $(LUA_A) $(LIBS)
 
 clean:
-	$(RM) $(ALL_T) $(ALL_O) onelua.o
+	$(RM) $(ALL_T) $(ALL_O) onelua.o $(GLM_A)
 
 depend:
 	@$(CC) $(CFLAGS) -MM l*.c

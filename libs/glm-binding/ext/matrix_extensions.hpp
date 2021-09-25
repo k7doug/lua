@@ -625,6 +625,21 @@ namespace glm {
 
   /* Fixes */
 
+  template<typename T, qualifier Q>
+  GLM_FUNC_QUALIFIER mat<4, 4, T, Q> _scaleBias(T scale, T bias) {
+    mat<4, 4, T, Q> result(0);
+    result[3] = vec<4, T, Q>(vec<3, T, Q>(bias), static_cast<T>(1));
+    result[0][0] = scale;
+    result[1][1] = scale;
+    result[2][2] = scale;
+    return result;
+  }
+
+  template<typename T, qualifier Q>
+  GLM_FUNC_QUALIFIER mat<4, 4, T, Q> _scaleBias(mat<4, 4, T, Q> const &m, T scale, T bias) {
+    return m * _scaleBias<T, Q>(scale, bias);
+  }
+
   template<length_t C, length_t R, typename T, qualifier Q>
   GLM_FUNC_QUALIFIER bool _isNull(mat<C, R, T, Q> const &m, T eps = epsilon<T>) {
     bool result = true;
@@ -645,6 +660,17 @@ namespace glm {
         v[j] = m[j][i];
 
       result &= isNormalized(v, eps);
+    }
+    return result;
+  }
+
+  template<length_t C, length_t R, typename T, qualifier Q>
+  GLM_FUNC_QUALIFIER bool _isIdentity(mat<C, R, T, Q> const &m, T eps = epsilon<T>) {
+    bool result = true;
+    for (length_t i = 0; i < C; ++i) {
+      for (length_t j = 0; j < R; ++j) {
+        result &= ((i == j) ? (abs(m[i][j] - 1) <= eps) : (abs(m[i][j]) <= eps));
+      }
     }
     return result;
   }
