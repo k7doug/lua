@@ -742,7 +742,7 @@ function KDTree:GenericQuery(stack, F, arg0, arg1, yield)
     end
 end
 
---[[ KDTree:GenericQuery but implemented with GenericQuery --]]
+--[[ KDTree:Query but implemented with GenericQuery --]]
 function KDTree:Query2(stack, point, yield)
     self:GenericQuery(stack, glm_aabb_contains, point, nil, yield)
 end
@@ -873,6 +873,7 @@ local function ComputeStatistics(self, rootIndex)
     local objCount,nodeCount,leafCount = 0,0,0
     local minLeafCount,maxLeafCount = glm_huge,-glm_huge
     local minDepth,maxDepth = glm_huge,-glm_huge
+
     -- Welfords algorithm for object count distribution
     local k,m,m_last,s,s_last = 0,0.0,0.0,0.0,0.0
 
