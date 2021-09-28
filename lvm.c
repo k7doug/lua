@@ -797,7 +797,8 @@ lua_Number luaV_modf (lua_State *L, lua_Number m, lua_Number n) {
 /*
 ** Shift left operation. (Shift right just negates 'y'.)
 */
-#define luaV_shiftr(x,y)	luaV_shiftl(x,-(y))
+#define luaV_shiftr(x,y)	luaV_shiftl(x,intop(-, 0, y))
+
 
 lua_Integer luaV_shiftl (lua_Integer x, lua_Integer y) {
   if (y < 0) {  /* shift right? */
@@ -1554,12 +1555,12 @@ LUA_JUMPTABLE_ATTRIBUTE void luaV_execute (lua_State *L, CallInfo *ci) {
         op_bitwise(L, l_bxor);
         vmbreak;
       }
-      vmcase(OP_SHR) {
-        op_bitwise(L, luaV_shiftr);
-        vmbreak;
-      }
       vmcase(OP_SHL) {
         op_bitwise(L, luaV_shiftl);
+        vmbreak;
+      }
+      vmcase(OP_SHR) {
+        op_bitwise(L, luaV_shiftr);
         vmbreak;
       }
       vmcase(OP_MMBIN) {
@@ -1726,7 +1727,6 @@ LUA_JUMPTABLE_ATTRIBUTE void luaV_execute (lua_State *L, CallInfo *ci) {
           updatetrap(ci);  /* C call; nothing else to be done */
         else {  /* Lua call: run function in this same C frame */
           ci = newci;
-          ci->callstatus = 0;  /* call re-uses 'luaV_execute' */
           goto startfunc;
         }
         vmbreak;
@@ -1747,9 +1747,8 @@ LUA_JUMPTABLE_ATTRIBUTE void luaV_execute (lua_State *L, CallInfo *ci) {
           lua_assert(base == ci->func + 1);
         }
         while (!ttisfunction(s2v(ra))) {  /* not a function? */
-          luaD_tryfuncTM(L, ra);  /* try '__call' metamethod */
+          ra = luaD_tryfuncTM(L, ra);  /* try '__call' metamethod */
           b++;  /* there is now one extra argument */
-          checkstackGCp(L, 1, ra);
         }
         if (!ttisLclosure(s2v(ra))) {  /* C function? */
           luaD_precall(L, ra, LUA_MULTRET);  /* call it */
@@ -1760,9 +1759,11 @@ LUA_JUMPTABLE_ATTRIBUTE void luaV_execute (lua_State *L, CallInfo *ci) {
           updatetrap(ci);  /* 'luaD_poscall' can change hooks */
           goto ret;  /* caller returns after the tail call */
         }
-        ci->func -= delta;  /* restore 'func' (if vararg) */
-        luaD_pretailcall(L, ci, ra, b);  /* prepare call frame */
-        goto startfunc;  /* execute the callee */
+        else {  /* Lua function */
+          ci->func -= delta;  /* restore 'func' (if vararg) */
+          luaD_pretailcall(L, ci, ra, b);  /* prepare call frame */
+          goto startfunc;  /* execute the callee */
+        }
       }
       vmcase(OP_RETURN) {
         int n = GETARG_B(i) - 1;  /* number of results */

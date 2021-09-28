@@ -92,7 +92,7 @@ end
 
     See "decalType" and "PatchDecalDiffuseMap" for its limitations.
 --]]
-function CreateDecalFromRaycastResult(decalType, pos, surface, entity, textureSize, m_quat)
+function CreateDecalFromRaycastResult(decalType, pos, surface, entity, textureSize)
     local decalEps = 1E-2  -- Decal properties
     local decalTimeout = -1.0
 

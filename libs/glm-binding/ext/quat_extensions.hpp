@@ -13,6 +13,12 @@
 */
 #ifndef __EXT_EXTENSION_QUAT_HPP__
 #define __EXT_EXTENSION_QUAT_HPP__
+
+/* @TEMP Disallow 820a2c0e625f26000c688d841836bb10483be34d */
+#if defined(GLM_FORCE_QUAT_DATA_XYZW)
+  #error "glm broke compatbility, please compile without GLM_FORCE_QUAT_DATA_XYZW"
+#endif
+
 #if !defined(GLM_ENABLE_EXPERIMENTAL)
   #define GLM_ENABLE_EXPERIMENTAL
 #endif

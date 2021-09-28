@@ -537,10 +537,11 @@ static int glmMat_call_unpack(lua_State *L) { return glm_unpack_matrix(L, 1); };
 ** stack, below original 'func', so that 'luaD_precall' can call it. Raise
 ** an error if there is no '__call' metafield.
 */
-void luaD_tryfuncTM (lua_State *L, StkId func) {
+StkId luaD_tryfuncTM (lua_State *L, StkId func) {
   TValue unpack_fallback;
   const TValue *tm = luaT_gettmbyobj(L, s2v(func), TM_CALL);
   StkId p;
+  checkstackGCp(L, 1, func);  /* space for metamethod */
   if (l_unlikely(ttisnil(tm))) {
     /* Default _call operators for vectors and matrices unpack its contents */
     if (ttisvector(s2v(func))) {
@@ -559,6 +560,7 @@ void luaD_tryfuncTM (lua_State *L, StkId func) {
     setobjs2s(L, p, p-1);
   L->top++;  /* stack space pre-allocated by the caller */
   setobj2s(L, func, tm);  /* metamethod is the new function to be called */
+  return func;
 }
 
 
@@ -660,6 +662,17 @@ void luaD_pretailcall (lua_State *L, CallInfo *ci, StkId func, int narg1) {
 }
 
 
+static CallInfo *prepCallInfo (lua_State *L, StkId func, int nret,
+                                             int mask, StkId top) {
+  CallInfo *ci = L->ci = next_ci(L);  /* new frame */
+  ci->func = func;
+  ci->nresults = nret;
+  ci->callstatus = mask;
+  ci->top = top;
+  return ci;
+}
+
+
 /*
 ** Prepares the call to a function (C or Lua). For C functions, also do
 ** the call. The function to be called is at '*func'.  The arguments
@@ -681,11 +694,8 @@ CallInfo *luaD_precall (lua_State *L, StkId func, int nresults) {
       int n;  /* number of returns */
       CallInfo *ci;
       checkstackGCp(L, LUA_MINSTACK, func);  /* ensure minimum stack size */
-      L->ci = ci = next_ci(L);
-      ci->nresults = nresults;
-      ci->callstatus = CIST_C;
-      ci->top = L->top + LUA_MINSTACK;
-      ci->func = func;
+      L->ci = ci = prepCallInfo(L, func, nresults, CIST_C,
+                                   L->top + LUA_MINSTACK);
       lua_assert(ci->top <= L->stack_last);
       if (l_unlikely(L->hookmask & LUA_MASKCALL)) {
         int narg = cast_int(L->top - func) - 1;
@@ -705,20 +715,15 @@ CallInfo *luaD_precall (lua_State *L, StkId func, int nresults) {
       int nfixparams = p->numparams;
       int fsize = p->maxstacksize;  /* frame size */
       checkstackGCp(L, fsize, func);
-      L->ci = ci = next_ci(L);
-      ci->nresults = nresults;
+      L->ci = ci = prepCallInfo(L, func, nresults, 0, func + 1 + fsize);
       ci->u.l.savedpc = p->code;  /* starting point */
-      ci->top = func + 1 + fsize;
-      ci->func = func;
-      L->ci = ci;
       for (; narg < nfixparams; narg++)
         setnilvalue(s2v(L->top++));  /* complete missing arguments */
       lua_assert(ci->top <= L->stack_last);
       return ci;
     }
     default: {  /* not a function */
-      checkstackGCp(L, 1, func);  /* space for metamethod */
-      luaD_tryfuncTM(L, func);  /* try to get '__call' metamethod */
+      func = luaD_tryfuncTM(L, func);  /* try to get '__call' metamethod */
       goto retry;  /* try again with metamethod */
     }
   }

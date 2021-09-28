@@ -170,11 +170,15 @@ vec3(70.000000, -0.000000, 0.000000)
 > slerp(m:toQuat(), m2:toQuat(), 2/glm.pi)
 quat(0.877641, {0.479318, 0.000000, 0.000000})
 
--- Other examples:
-> aspect = 4.0 / 3.0
-> viewMatrix = glm.lookAt(glm.vec3(0.3, 0.3, 1.5), glm.vec3(0, 0, 0), glm.vec3(0, 1, 0))
-> perspective = glm.perspective(glm.radians(55.0), aspect, 0.1, 100.0)
-> frustum = glm.frustum(-aspect * 0.1, aspect * 0.1, -0.1, 0.1, 0.1, 100.0)
+-- Example ported from https://github.com/g-truc/glm/blob/master/readme.md
+function camera(Translate, Rotate)
+    local Projection = glm.perspective(glm.pi * 0.25, 4.0 / 3.0, 0.1, 100.0)
+    local View = glm.translate(glm.mat4(1.0), glm.vec3(0.0, 0.0, -Translate))
+    View = glm.rotate(View, Rotate.y, glm.vec3(-1.0, 0.0, 0.0))
+    View = glm.rotate(View, Rotate.x, glm.vec3(0.0, 1.0, 0.0))
+    local Model = glm.scale(glm.mat4(1.0), glm.vec3(0.5))
+    return Projection * View * Model
+end
 ```
 
 The binding library also extends GLM to:
@@ -433,13 +437,6 @@ result = utf8.strcmputf8i(stringLH, stringRH)
 
 ```
 
-#### Library Preloading:
-Allow the preloading of libraries, e.g., ``lib = require('...')``, via command line arguments.
-```bash
-# Preload a JSON library (stored at _G.rapidjson) and msgpack library (stored at _G.msgpack)
-./lua -lglm -lrapidjson -lmsgpack=cmsgpack
-```
-
 #### Readline History:
 Keep a persistent list of commands that have been run on the Lua interpreter. With the `LUA_HISTORY` environment variable used to declare the location history.
 
@@ -449,6 +446,9 @@ As of [LinkCommitHere](...), LuaGLM can only be compiled as C++ code.
 ### Make
 An modified version of the makefile [bundled](https://www.lua.org/download.html) with release versions of Lua. The same instructions apply:
 ```bash
+# Ensure the GLM library is initialized
+└> git submodule update --init
+
 # Build for the linux platform target, linked with readline;
 └> make linux-readline
 
@@ -463,6 +463,8 @@ An modified version of the makefile [bundled](https://www.lua.org/download.html)
 A CMake project that builds the stand-alone interpreter (`lua`), a compiler (`luac`), the GLM binding library, and shared/static libraries. This project includes variables for most preprocessor configuration flags supported by Lua and GLM. See `cmake -LAH` or [cmake-gui](https://cmake.org/runningcmake/) for the complete list of build options.
 
 ```bash
+└> git submodule update --init
+
 # Create build directory
 └> mkdir -p build ; cd build
 
@@ -556,7 +558,7 @@ See [libs/scripts](libs/scripts) for a collection of example/test scripts using 
 1. Support for integer vectors/matrices. Either by introducing an additional type, e.g., `LUA_TVECTORI`, or splitting the vector tag `LUA_TVECTOR` into `LUA_TVECTOR2`, `LUA_TVECTOR3`, `LUA_TVECTOR4`, and `LUA_TQUAT` and use variant bits for the primitive type.
 1. Replace `glm/gtc/random.{inl,hpp}` with a variant that takes advantage of CXX11's [Pseudo-random number generation](https://en.cppreference.com/w/cpp/numeric/random) facilities (and unify it with `math.random`).
 1. One downside to vectors/quaternions being an explicit `Value` is that they increase the minimum Value size to at least 16 bytes. Given that types in Lua are fairly transparent, it may be beneficial to introduce, or at least experiment with, a compile-time option to make vector/quaternion types collectible.
-1. Support for triangles and meshes, retrofit current spatial indexing structures for triangles, and consider BSPs.
+1. Support for meshes and retrofit current spatial indexing structures for triangles; consider BSPs.
 1. Include broad phase collision scripting examples, e.g., dynamic AABB tree and/or multibox sweep-and-prune.
 1. Initial support for frustums (both orthographic and perspective) and OBBs, or, at minimum, the more computationally complex parts of these structures.
 1. Allow some binding functions to be independently applied to each value or structure on the call stack. If disabled, only operate on the minimum number of required objects (following lmathlib). For example:
@@ -578,13 +580,13 @@ See [libs/scripts](libs/scripts) for a collection of example/test scripts using 
 Ordered by priority.
 1. [geom](libs/glm-binding/geom): SIMD support (... for the most commonly use functions).
 1. Add support for two-dimensional geometrical structures: Ray2D, Line2D, Plane2D.
+1. Optimize `binding` functions that use 'glm_i2v'. Logic redundant with ``gLuaSharedTrait::Next(LB)``.
 1. Optimize `glm_createMatrix`. Profiling case '4x4 matrix creation (lua_Alloc)' is the one of the slowest operations in the added vector/matrix API. Worse when using the default Windows allocator.
 1. Optimize runtime swizzling: `swizzle` and `glmVec_get`. It is likely possible to improve this operation by 15/20 percent.
-1. Improve build scripts for linking against custom allocators. [rpmalloc](https://github.com/gottfriedleibniz/rpmalloc/tree/lua) has shown significant upsides for cases of tight loops that allocate many matrix objects. For example, an internal profiling case '4x4 matrix - 4 component matrix * matrix' (using TM_MUL; generational GC enabled) halved its execution time by using a custom allocator.
 1. Improve support for `glm::mat3x4` and `glm::mat4x3`.
 1. `glmMat_set` support for tables, e.g., `mat[i] = { ... }`, by using `glmH_tovector`.
-1. Fix/improve MSVC portions of CMakeLists.
 1. Features/configurations to reduce size of binding library.
+1. Consider replacing the 'blob' variant with an FFI library: advanced use is required.
 1. Include GLM version control in binding library to support older GLM versions.
 
 ## Benchmarking

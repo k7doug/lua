@@ -1154,7 +1154,7 @@ TRAITS_LAYOUT_DEFN(diagonal4x4, glm::diagonal4x4, LAYOUT_UNARY, gLuaVec4<>)
 #endif
 
 #if defined(GTX_MATRIX_QUERY_HPP)
-MATRIX_DEFN(isIdentity, glm::isIdentity, LAYOUT_BINARY_EPS)
+MATRIX_DEFN(isIdentity, glm::_isIdentity, LAYOUT_BINARY_EPS)
 MATRIX_DEFN(isOrthogonal, glm::isOrthogonal, LAYOUT_BINARY_EPS)
 ROTATION_MATRIX_DEFN(extractScale, glm::extractScale, LAYOUT_UNARY) /* LUA_MATRIX_EXTENSIONS */
 ROTATION_MATRIX_DEFN(hasUniformScale, glm::hasUniformScale, LAYOUT_BINARY_EPS)
@@ -1171,11 +1171,11 @@ TRAITS_DEFN(shearZ3D, glm::shearZ3D, gLuaMat4x4<>, gLuaFloat, gLuaFloat)
 GLM_BINDING_QUALIFIER(scaleBias) {
   GLM_BINDING_BEGIN
   if (gLuaMat4x4<>::Is(LB, LB.idx))
-    TRAITS_FUNC(LB, glm::scaleBias, gLuaMat4x4<>, gLuaFloat, gLuaFloat);
+    TRAITS_FUNC(LB, glm::_scaleBias, gLuaMat4x4<>, gLuaFloat, gLuaFloat);
 
   const gLuaFloat::type a = gLuaFloat::Next(LB);
   const gLuaFloat::type b = gLuaFloat::Next(LB);
-  return gLuaBase::Push(LB, glm::scaleBias<glm_Float, glm::qualifier::defaultp>(a, b));
+  return gLuaBase::Push(LB, glm::_scaleBias<glm_Float, glm::qualifier::defaultp>(a, b));
   GLM_BINDING_END
 }
 #endif

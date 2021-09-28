@@ -6,9 +6,6 @@ PROJECT( lua CXX )
 SET(CMAKE_CXX_STANDARD 11)
 SET(CMAKE_CXX_STANDARD_REQUIRED ON)
 SET(CXX_EXTENSIONS OFF)
-IF( _CMAKE_CXX_IPO_MAY_BE_SUPPORTED_BY_COMPILER )
-  SET(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE) # CMake 3.9.0; support flto
-ENDIF()
 
 INCLUDE(CheckCXXCompilerFlag)
 IF( CMAKE_CXX_COMPILER_ID MATCHES "Clang" )
@@ -71,8 +68,8 @@ IF( MSVC )
     MESSAGE(WARNING "MSVC detected! For MSVC/msbuild environments, it is advised to use the LLVM/ClangCL toolset")
   ENDIF()
 
-  IF(CMAKE_BUILD_TYPE MATCHES Debug OR CMAKE_BUILD_TYPE MATCHES RelWithDebInfo)
-    ADD_COMPILE_OPTIONS(/OX /Oi)
+  IF(CMAKE_BUILD_TYPE MATCHES Debug)
+    ADD_COMPILE_OPTIONS(/Oi)
   ELSE()
     ADD_COMPILE_OPTIONS(/Ob2 /Oi /GF /GS- /EHsc /DNDEBUG)
   ENDIF()
@@ -99,13 +96,13 @@ IF( MSVC )
   ADD_COMPILE_DEFINITIONS(_CRT_SECURE_NO_DEPRECATE)
   ADD_COMPILE_DEFINITIONS(_CRT_NONSTDC_NO_DEPRECATE)
 
-  SET(LUA_C_FLAGS "/MT")
+  SET(LUA_C_FLAGS "")
   SET(LUA_REL_FLAGS "${LUA_REL_FLAGS} /GL")
   SET(LUA_LINKFLAGS "${LUA_LINKFLAGS} /LTCG")
 
   # Visual Studio 2019 feature
   CHECK_CXX_COMPILER_FLAG("/Ob3" COMPILER_OPT_OB3)
-  IF( COMPILER_OPT_OB3 )
+  IF( COMPILER_OPT_OB3 AND NOT CMAKE_COMPILER_IS_CLANGXX )
     STRING(REGEX REPLACE "[-/]Ob[1-4]" "" CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE}")
     STRING(REGEX REPLACE "[-/]Ob[1-4]" "" CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE}")
     STRING(REGEX REPLACE "[-/]Ob[1-4]" "" CMAKE_C_FLAGS_RELWITHDEBINFO "${CMAKE_C_FLAGS_RELWITHDEBINFO}")
@@ -196,12 +193,12 @@ ELSE()
 
   # Compile everything, lglm.cpp, or nothing with common performance tweaks
   IF( LUA_NATIVE_ARCH )
-    ADD_COMPILE_OPTIONS(-fno-stack-protector -flto)
+    ADD_COMPILE_OPTIONS(-fno-stack-protector)
     IF (NOT CMAKE_CXX_COMPILER_ID STREQUAL "Intel")
       ADD_COMPILE_OPTIONS(-fno-plt)
     ENDIF()
   ELSEIF( GLM_NATIVE_ARCH )
-    SET(glm_nativeFlags "${glm_nativeFlags} --fno-stack-protector -flto")
+    SET(glm_nativeFlags "${glm_nativeFlags} --fno-stack-protector")
     IF (NOT CMAKE_CXX_COMPILER_ID STREQUAL "Intel")
       SET(glm_nativeFlags "${glm_nativeFlags} -fno-plt")
     ENDIF()
@@ -314,12 +311,12 @@ OPTION(LUA_COMPAT_5_3 "Controls other macros for compatibility with Lua 5.3" ON)
 OPTION(LUA_COMPAT_5_4_0 "Controls other macros for compatibility with Lua 5.4.0" OFF)
 OPTION(LUA_COMPAT_MATHLIB "Controls the presence of several deprecated functions in the mathematical library." ON)
 OPTION(LUA_USE_JUMPTABLE "Force the use of jump tables in the main interpreter loop" OFF)
-OPTION(LUA_USE_LONGJMP "handles errors with _longjmp/_setjmp when compiling as C++" OFF)
-OPTION(LUA_CPP_EXCEPTIONS "unprotected calls are wrapped in typed C++ exceptions" ON)
+OPTION(LUA_USE_LONGJMP "handles errors with _longjmp/_setjmp when compiling as C++" ON)
+OPTION(LUA_CPP_EXCEPTIONS "unprotected calls are wrapped in typed C++ exceptions" OFF)
 
-IF( CMAKE_BUILD_TYPE STREQUAL Debug )
-  SET(LUA_INCLUDE_TEST ON)
-ENDIF()
+# IF( CMAKE_BUILD_TYPE STREQUAL Debug )
+#   SET(LUA_INCLUDE_TEST ON)
+# ENDIF()
 
 SET(LUA_F2IMOD_ENUM F2Ieq F2Ifloor F2Iceil)
 SET(LUA_F2IMOD F2Ieq CACHE STRING "Rounding modes for float-to-integer coercion")
@@ -478,7 +475,6 @@ OPTION(GRIT_COMPAT_IPAIRS "Reintroduce compatibility for the ``__ipairs`` metame
 OPTION(GRIT_POWER_DEFER "Enable the defer statement" OFF)
 OPTION(GRIT_POWER_DEFER_OLD "Import func2close from ltests.h into the base library as `defer`" ON)
 OPTION(GRIT_POWER_JOAAT "Enable compile time Jenkins' one-at-a-time hashing" ON)
-OPTION(GRIT_POWER_PRELOADLIBS "Allow the preloading of libraries via command line arguments." ON)
 OPTION(GRIT_POWER_COMPOUND "Add compound operators (+=, -=, *=, /=, <<=, >>=, &=, |=, and ^=) to the language." ON)
 OPTION(GRIT_POWER_INTABLE "Support for unpacking named values from tables using the in keyword" ON)
 OPTION(GRIT_POWER_TABINIT "Syntactic sugar to improve the syntax for specifying sets" ON)
@@ -523,10 +519,6 @@ ENDIF()
 
 IF( GRIT_COMPAT_IPAIRS )
   ADD_COMPILE_DEFINITIONS(GRIT_COMPAT_IPAIRS)
-ENDIF()
-
-IF( GRIT_POWER_PRELOADLIBS )
-  ADD_COMPILE_DEFINITIONS(GRIT_POWER_PRELOADLIBS)
 ENDIF()
 
 IF( GRIT_POWER_COMPOUND )
@@ -591,7 +583,7 @@ OPTION(GLM_FORCE_SILENT_WARNINGS "Silent C++ warnings from language extensions" 
 
 # Formerly known as 'GLM_FORCE_QUAT_DATA_WXYZ', however, changed without support
 # for backwards compatibility in-mind; must be compensated for in source.
-OPTION(GLM_FORCE_QUAT_DATA_XYZW "Force GLM to store quat data as x,y,z,w instead of w,x,y,z" ON)
+OPTION(GLM_FORCE_QUAT_DATA_XYZW "Force GLM to store quat data as x,y,z,w instead of w,x,y,z" OFF)
 # GLM_FORCE_PRECISION_{ LOWP_FLOAT, MEDIUMP_FLOAT, HIGHP_FLOAT }
 
 ADD_COMPILE_DEFINITIONS(GLM_ENABLE_EXPERIMENTAL)
@@ -662,7 +654,8 @@ IF( GLM_FORCE_SILENT_WARNINGS )
 ENDIF()
 
 IF( GLM_FORCE_QUAT_DATA_XYZW )
-  ADD_COMPILE_DEFINITIONS(GLM_FORCE_QUAT_DATA_XYZW)
+  MESSAGE(FATAL_ERROR "Disable GLM_FORCE_QUAT_DATA_XYZW" )
+  # ADD_COMPILE_DEFINITIONS(GLM_FORCE_QUAT_DATA_XYZW)
 ENDIF()
 
 IF( LUA_GLM_INCLUDE_EXT )
@@ -793,6 +786,7 @@ IF( NOT ONE_LUA )
   TARGET_SOURCES(liblua_static PRIVATE ${LUA_ALLOCATOR_FILES})
 
   TARGET_LINK_LIBRARIES(liblua_static ${LIBS})
+  SET_TARGET_PROPERTIES(liblua_static PROPERTIES POSITION_INDEPENDENT_CODE ON)
   SET_TARGET_PROPERTIES(liblua_static PROPERTIES OUTPUT_NAME lua${LIB_LUA_VER}_static CLEAN_DIRECT_OUTPUT 1)
 ELSE()
   ADD_COMPILE_DEFINITIONS(LUA_INCLUDE_LIBGLM)
@@ -931,6 +925,6 @@ IF( LUA_INCLUDE_TEST ) # ctest --verbose
   ENABLE_TESTING()
   ADD_TEST(NAME test_all
     WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}/testes
-    COMMAND lua ${PROJECT_SOURCE_DIR}/testes/all.lua
+    COMMAND lua -e "_port=true" ${PROJECT_SOURCE_DIR}/testes/all.lua
   )
 ENDIF()

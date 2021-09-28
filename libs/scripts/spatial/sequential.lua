@@ -19,9 +19,9 @@ local glm = glm
 local glm_aabb_contains = glm.aabb.contains
 local glm_aabb_distance = glm.aabb.distance
 local glm_aabb_slabs = glm.aabb.slabs
-local glm_aabb_intersectRay = glm.aabb.intersectRay
-local glm_aabb_intersectAABB = glm.aabb.intersectAABB
-local glm_aabb_intersectSphere = glm.aabb.intersectSphere
+local glm_aabb_intersectsRay = glm.aabb.intersectsRay
+local glm_aabb_intersectsAABB = glm.aabb.intersectsAABB
+local glm_aabb_intersectsSphere = glm.aabb.intersectsSphere
 
 SequentialSpatial = setmetatable({}, {
     __call = function(_, ...)
@@ -125,7 +125,7 @@ end
 
 --[[ @OVERRIDE --]]
 function SequentialSpatial:Raycast(cache, origin, direction, yield)
-    return self:GenericQuery(cache, glm_aabb_intersectRay, origin, direction, yield)
+    return self:GenericQuery(cache, glm_aabb_intersectsRay, origin, direction, yield)
     --return self:GenericQuery(cache, glm_aabb_slabs, origin, direction, yield)
 end
 
@@ -135,12 +135,12 @@ end
 
 --[[ @OVERRIDE --]]
 function SequentialSpatial:Colliding(cache, colMin, colMax, yield)
-    return self:GenericQuery(cache, glm_aabb_intersectAABB, colMin, colMax, yield)
+    return self:GenericQuery(cache, glm_aabb_intersectsAABB, colMin, colMax, yield)
 end
 
 --[[ @OVERRIDE --]]
 function SequentialSpatial:SphereIntersection(cache, origin, radius, yield)
-    return self:GenericQuery(cache, glm_aabb_intersectSphere, origin, radius, yield)
+    return self:GenericQuery(cache, glm_aabb_intersectsSphere, origin, radius, yield)
 end
 
 --[[ @OVERRIDE --]]

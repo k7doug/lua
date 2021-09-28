@@ -1,6 +1,17 @@
 /*
 ** $Id: lglmlib.cpp $
 ** GLM binding library
+**
+** Porting GLM-specific code between luaglm and cpp should be painless (or as
+** painless as possible). With key differences being:
+**  1. Static versus Dynamic typing (or 'auto' versus 'local' syntax);
+**  2. Namespace resolution (::) versus table access (.) syntax. However, the
+**    'GRIT_POWER_NAMESPACE_SEL' build option removes this case at the cost of
+**    'goto' no longer being a language feature.
+**  3. Constants in luaglm are stored by value, e.g. glm.pi. However in cpp,
+**    they are templated constant expressions, e.g., glm::pi<float>().
+**  4. Floating-point literals (1.0f) vs. lua_Number (1.0).
+**
 ** See Copyright Notice in lua.h
 */
 
@@ -95,6 +106,7 @@ static const luaL_Reg luaglm_lib[] = {
   { "aabb", GLM_NULLPTR },
   { "line", GLM_NULLPTR },
   { "ray", GLM_NULLPTR },
+  { "triangle", GLM_NULLPTR },
   { "segment", GLM_NULLPTR },
   { "sphere", GLM_NULLPTR },
   { "plane", GLM_NULLPTR },
@@ -124,6 +136,7 @@ extern "C" {
     luaL_newlib(L, luaglm_aabblib); lua_setfield(L, -2, "aabb");
     luaL_newlib(L, luaglm_linelib); lua_setfield(L, -2, "line");
     luaL_newlib(L, luaglm_raylib); lua_setfield(L, -2, "ray");
+    luaL_newlib(L, luaglm_trianglelib); lua_setfield(L, -2, "triangle");
     luaL_newlib(L, luaglm_segmentlib); lua_setfield(L, -2, "segment");
     luaL_newlib(L, luaglm_spherelib); lua_setfield(L, -2, "sphere");
     luaL_newlib(L, luaglm_planelib); lua_setfield(L, -2, "plane");
@@ -133,7 +146,7 @@ extern "C" {
     // The "polygon" API is a reference to the polygon metatable stored in the registry.
     glm_newmetatable(L, LUA_GLM_POLYGON_META, "polygon", luaglm_polylib);
 #endif
-  #if defined(CONSTANTS_HPP) || defined(EXT_SCALAR_CONSTANTS_HPP)
+#if defined(CONSTANTS_HPP) || defined(EXT_SCALAR_CONSTANTS_HPP)
     GLM_CONSTANT(L, cos_one_over_two);
     GLM_CONSTANT(L, e);
     GLM_CONSTANT(L, epsilon);
@@ -164,7 +177,7 @@ extern "C" {
     GLM_CONSTANT(L, two_thirds);
     GLM_CONSTANT(L, zero);
     GLM_CONSTANT(L, epsilon);
-  #endif
+#endif
     GLM_CONSTANT(L, pi); /* lmathlib */
     lua_pushnumber(L, glm::epsilon<glm_Number>()); lua_setfield(L, -2, "eps");
     lua_pushnumber(L, static_cast<glm_Number>(glm::epsilon<glm_Float>())); lua_setfield(L, -2, "feps");

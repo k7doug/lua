@@ -36,9 +36,9 @@ local glm_aabb_contains = glm.aabb.contains
 local glm_aabb_containsAABB = glm.aabb.containsAABB
 local glm_aabb_distance = glm.aabb.distance
 local glm_aabb_slabs = glm.aabb.slabs
-local glm_aabb_intersectRay = glm.aabb.intersectRay
-local glm_aabb_intersectAABB = glm.aabb.intersectAABB
-local glm_aabb_intersectSphere = glm.aabb.intersectSphere
+local glm_aabb_intersectsRay = glm.aabb.intersectsRay
+local glm_aabb_intersectsAABB = glm.aabb.intersectsAABB
+local glm_aabb_intersectsSphere = glm.aabb.intersectsSphere
 local glm_midpoint = function(x, y) return x + 0.5 * (y - x) end
 
 -- "Infinity" may not be available in cases where the Octree is serialized;
@@ -752,7 +752,7 @@ end
 
 --[[ @OVERRIDE --]]
 function Octree:Raycast(cache, origin, direction, yield)
-    self:GenericQuery(cache, glm_aabb_intersectRay, origin, direction, yield)
+    self:GenericQuery(cache, glm_aabb_intersectsRay, origin, direction, yield)
 end
 
 function Octree:Slabs(cache, origin, direction, yield)
@@ -761,12 +761,12 @@ end
 
 --[[ @OVERRIDE --]]
 function Octree:Colliding(cache, colMin, colMax, yield)
-    self:GenericQuery(cache, glm_aabb_intersectAABB, colMin, colMax, yield)
+    self:GenericQuery(cache, glm_aabb_intersectsAABB, colMin, colMax, yield)
 end
 
 --[[ @OVERRIDE --]]
 function Octree:SphereIntersection(cache, origin, radius, yield)
-    self:GenericQuery(cache, glm_aabb_intersectSphere, origin, radius, yield)
+    self:GenericQuery(cache, glm_aabb_intersectsSphere, origin, radius, yield)
 end
 
 --[[ @OVERRIDE --]]

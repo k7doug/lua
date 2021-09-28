@@ -18,20 +18,18 @@
 { "bvec2", glmVec_bvec2 },
 { "bvec3", glmVec_bvec3 },
 { "bvec4", glmVec_bvec4 },
-
 { "qua", glmVec_qua },
 { "quat", glmVec_qua },
-
 { "mat", glmMat_mat },
-{ "mat2x2", glmMat_mat2x2 },
+{ "mat2x2", glmMat_mat2x2 }, { "mat2", glmMat_mat2x2 },
 { "mat2x3", glmMat_mat2x3 },
 { "mat2x4", glmMat_mat2x4 },
 { "mat3x2", glmMat_mat3x2 },
-{ "mat3x3", glmMat_mat3x3 },
+{ "mat3x3", glmMat_mat3x3 }, { "mat3", glmMat_mat3x3 },
 { "mat3x4", glmMat_mat3x4 },
 { "mat4x2", glmMat_mat4x2 },
 { "mat4x3", glmMat_mat4x3 },
-{ "mat4x4", glmMat_mat4x4 },
+{ "mat4x4", glmMat_mat4x4 }, { "mat4", glmMat_mat4x4 },
 
 /* Object Properties */
 GLM_LUA_REG(equal),

@@ -8,6 +8,7 @@
 #include "line.hpp"
 #include "linesegment.hpp"
 #include "ray.hpp"
+#include "triangle.hpp"
 
 namespace glm {
   /// <summary>
@@ -329,9 +330,76 @@ namespace glm {
   /// that lie in the negative halfspace of the plane and returning a new
   /// polygon.
   /// </summary>
-  //template<length_t L, typename T, qualifier Q>
-  //GLM_GEOM_QUALIFIER Polygon<L, T, Q> clip(const Plane<L, T, Q> &plane, const Polygon<L, T, Q> &polygon) {
-  //}
+  // template<length_t L, typename T, qualifier Q>
+  // GLM_GEOM_QUALIFIER Polygon<L, T, Q> clip(const Plane<L, T, Q> &plane, const Polygon<L, T, Q> &polygon) {
+  // }
+
+  /// <summary>
+  /// @NOTE "t1" or "t2" cannot be references to "triangle".
+  /// </summary>
+  template<length_t L, typename T, qualifier Q>
+  GLM_GEOM_QUALIFIER int clip(const Plane<L, T, Q> &plane, const Triangle<L, T, Q> &triangle, Triangle<L, T, Q> &t1, Triangle<L, T, Q> &t2) {
+    const bool aSide = isOnPositiveSide(plane, triangle.a);
+    const bool bSide = isOnPositiveSide(plane, triangle.b);
+    const bool cSide = isOnPositiveSide(plane, triangle.c);
+    switch ((aSide ? 1 : 0) + (bSide ? 1 : 0) + (cSide ? 1 : 0)) {
+      case 1: {
+        if (bSide) {
+          t1.a = triangle.b;
+          t1.b = triangle.c;
+          t1.c = triangle.a;
+        }
+        else if (cSide) {
+          t1.a = triangle.c;
+          t1.c = triangle.b;
+          t1.b = triangle.a;
+        }
+        else {
+          t1 = triangle;
+        }
+
+        T t, r;
+        intersects(plane, LineSegment<L, T, Q>(t1.a, t1.b), t);
+        intersects(plane, LineSegment<L, T, Q>(t1.a, t1.c), r);
+
+        t1.b = t1.a + (t1.b - t1.a) * t;
+        t1.c = t1.a + (t1.c - t1.a) * r;
+        return 1;
+      }
+      case 2: {
+        if (!bSide) {
+          t1.a = triangle.b;
+          t1.b = triangle.c;
+          t1.c = triangle.a;
+        }
+        else if (!cSide) {
+          t1.a = triangle.c;
+          t1.c = triangle.b;
+          t1.b = triangle.a;
+        }
+        else {
+          t1 = triangle;
+        }
+
+        T t, r;
+        intersects(plane, LineSegment<L, T, Q>(t1.a, t1.b), t);
+        intersects(plane, LineSegment<L, T, Q>(t1.a, t1.c), r);
+
+        t2.a = t1.c;
+        t2.b = t1.a + (t1.c - t1.a) * r;
+        t2.c = t1.a + (t1.b - t1.a) * t;
+        t1.a = t2.c;
+        return 2;
+      }
+      case 3: {  // All vertices are on the positive side.
+        t1 = triangle;
+        return 1;
+      }
+      default:
+        break;
+    }
+    return 0;
+  }
 
   /// Orthographically projects the given object onto the plane.
 
@@ -363,6 +431,11 @@ namespace glm {
     if (nonDegenerate)
       *nonDegenerate = (length(l.dir) > T(0));
     return l;
+  }
+
+  template<length_t L, typename T, qualifier Q>
+  GLM_GEOM_QUALIFIER Triangle<L, T, Q> project(const Plane<L, T, Q> &plane, const Triangle<L, T, Q> &triangle) {
+    return Triangle<L, T, Q>(project(plane, triangle.a), project(plane, triangle.b), project(plane, triangle.c));
   }
 
   /// <summary>
@@ -417,11 +490,29 @@ namespace glm {
   }
 
   /// <summary>
-  /// Tests if the given point lies on the positive side of this plane
+  /// Tests if the given point lies on the positive side of this plane.
   /// </summary>
   template<length_t L, typename T, qualifier Q>
   GLM_GEOM_QUALIFIER bool isOnPositiveSide(const Plane<L, T, Q> &plane, const vec<L, T, Q> &point) {
     return signedDistance(plane, point) >= T(0);
+  }
+
+  /// <summary>
+  /// Triangle/Plane intersection test. Returning:
+  ///   1 - If the triangle is completely in the positive half-space of the plane;
+  ///  -1 - If the triangle is completely in the negative half-space of the plane;
+  ///   0 - If the triangle intersects the plane.
+  /// </summary>
+  template<length_t L, typename T, qualifier Q>
+  GLM_GEOM_QUALIFIER int examineSide(const Plane<L, T, Q> &plane, const Triangle<L, T, Q> &triangle, T eps = epsilon<T>()) {
+    const T a = signedDistance(plane, triangle.a);
+    const T b = signedDistance(plane, triangle.b);
+    const T c = signedDistance(plane, triangle.c);
+    if (a >= -eps && b >= -eps && c >= -eps)
+      return 1;
+    if (a <= eps && b <= eps && c <= eps)
+      return -1;
+    return 0;
   }
 
   /// Computes the distance between the plane and the given object(s).
@@ -466,12 +557,17 @@ namespace glm {
     return signedDistance<L, T, Q, Sphere<L, T, Q>>(plane, sphere);
   }
 
+  template<length_t L, typename T, qualifier Q>
+  GLM_GEOM_QUALIFIER T signedDistance(const Plane<L, T, Q> &plane, const Triangle<L, T, Q> &triangle) {
+    return signedDistance<L, T, Q, Triangle<L, T, Q>>(plane, triangle);
+  }
+
   /// <summary>
   /// Return an affine transformation matrix that projects orthographically onto
   /// the plane
   /// </summary>
   template<typename T, qualifier Q>
-  GLM_GEOM_QUALIFIER glm::mat<4, 3, T, Q> orthoProjection(const Plane<3, T, Q> &plane) {
+  GLM_GEOM_QUALIFIER mat<4, 3, T, Q> orthoProjection(const Plane<3, T, Q> &plane) {
     return orthoProjection<4, 3, T, Q>(plane.normal.x, plane.normal.y, plane.normal.z, plane.d);
   }
 
@@ -487,7 +583,7 @@ namespace glm {
   /// Returns a transformation matrix that mirrors objects along the plane.
   /// </summary>
   template<typename T, qualifier Q>
-  GLM_GEOM_QUALIFIER glm::mat<4, 3, T, Q> mirrorMatrix(const Plane<3, T, Q> &plane) {
+  GLM_GEOM_QUALIFIER mat<4, 3, T, Q> mirrorMatrix(const Plane<3, T, Q> &plane) {
     return planeMirror<4, 3, T, Q>(plane.normal.x, plane.normal.y, plane.normal.z, plane.d);
   }
 
@@ -532,17 +628,24 @@ namespace glm {
 
   template<length_t L, typename T, qualifier Q>
   GLM_GEOM_QUALIFIER bool contains(const Plane<L, T, Q> &plane, const Line<L, T, Q> &line, T eps = epsilon<T>()) {
-    return contains(plane, line.pos, epsilon<T>()) && isPerpendicular(line.dir, plane.normal, eps);
+    return contains(plane, line.pos, eps) && isPerpendicular(line.dir, plane.normal, eps);
   }
 
   template<length_t L, typename T, qualifier Q>
   GLM_GEOM_QUALIFIER bool contains(const Plane<L, T, Q> &plane, const Ray<L, T, Q> &ray, T eps = epsilon<T>()) {
-    return contains(plane, ray.pos, epsilon<T>()) && isPerpendicular(ray.dir, plane.normal, eps);
+    return contains(plane, ray.pos, eps) && isPerpendicular(ray.dir, plane.normal, eps);
   }
 
   template<length_t L, typename T, qualifier Q>
   GLM_GEOM_QUALIFIER bool contains(const Plane<L, T, Q> &plane, const LineSegment<L, T, Q> &line, T eps = epsilon<T>()) {
     return contains(plane, line.a, eps) && contains(plane, line.b, eps);
+  }
+
+  template<length_t L, typename T, qualifier Q>
+  GLM_GEOM_QUALIFIER bool contains(const Plane<L, T, Q> &plane, const Triangle<L, T, Q> &triangle, T eps = epsilon<T>()) {
+    return contains(plane, triangle.a, eps)
+           && contains(plane, triangle.b, eps)
+           && contains(plane, triangle.c, eps);
   }
 
   /// Tests whether the plane and the given object intersect.
@@ -634,12 +737,20 @@ namespace glm {
     return false;
   }
 
+  template<length_t L, typename T, qualifier Q>
+  GLM_GEOM_QUALIFIER bool intersects(const Plane<L, T, Q> &plane, const Triangle<L, T, Q> &triangle) {
+    const T a = signedDistance(plane, triangle.a);
+    const T b = signedDistance(plane, triangle.b);
+    const T c = signedDistance(plane, triangle.c);
+    return (a * b <= T(0) || a * c <= T(0));
+  }
+
   namespace detail {
     template<glm::length_t L, typename T, qualifier Q>
     struct compute_to_string<Plane<L, T, Q>> {
       GLM_GEOM_QUALIFIER std::string call(const Plane<L, T, Q> &plane) {
         char const *LiteralStr = literal<T, std::numeric_limits<T>::is_iec559>::value();
-        std::string FormatStr(detail::format("Plane(%s, %s)", "%s", LiteralStr));
+        std::string FormatStr(detail::format("plane(%%s, %s)", LiteralStr));
 
         return detail::format(FormatStr.c_str(),
           glm::to_string(plane.normal).c_str(),

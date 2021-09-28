@@ -7,6 +7,7 @@
 #include "setup.hpp"
 #include "line.hpp"
 #include "linesegment.hpp"
+#include "triangle.hpp"
 
 namespace glm {
   /// <summary>
@@ -43,11 +44,12 @@ namespace glm {
       dir = ray.dir;
       return *this;
     }
-
-    Line<L, T, Q> toLine() const {
-      return Line<L, T, Q>(pos, dir);
-    }
   };
+
+  template<length_t L, typename T, qualifier Q>
+  GLM_GEOM_QUALIFIER Line<L, T, Q> toLine(const Ray<L, T, Q> &ray) {
+    return Line<L, T, Q>(ray.pos, ray.dir);
+  }
 
   template<length_t L, typename T, qualifier Q>
   static Ray<L, T, Q> operator-(const Ray<L, T, Q> &ray) {
@@ -363,21 +365,33 @@ namespace glm {
   }
 
   template<length_t L, typename T, qualifier Q>
+  GLM_GEOM_QUALIFIER bool intersects(const Ray<L, T, Q> &ray, const Triangle<L, T, Q> &triangle, T &d, T &u, T &v) {
+    d = intersectTriangleLine(triangle, toLine(ray), u, v);
+    return d >= T(0) && d != std::numeric_limits<T>::infinity();
+  }
+
+  template<length_t L, typename T, qualifier Q>
   GLM_GEOM_QUALIFIER bool intersects(const Ray<L, T, Q> &ray, const Sphere<L, T, Q> &sphere) {
     T d(0), d2(0);
-    return intersects(sphere, ray, d, d2) > 0;
+    return intersects(ray, sphere, d, d2) > 0;
   }
 
   template<length_t L, typename T, qualifier Q>
   GLM_GEOM_QUALIFIER bool intersects(const Ray<L, T, Q> &ray, const AABB<L, T, Q> &aabb) {
     T d(0), d2(0);
-    return intersects(aabb, ray, d, d2) > 0;
+    return intersects(ray, aabb, d, d2) > 0;
   }
 
   template<length_t L, typename T, qualifier Q>
   GLM_GEOM_QUALIFIER bool intersects(const Ray<L, T, Q> &ray, const Plane<L, T, Q> &plane) {
     T d(0);
-    return intersects(plane, ray, d);
+    return intersects(ray, plane, d);
+  }
+
+  template<length_t L, typename T, qualifier Q>
+  GLM_GEOM_QUALIFIER bool intersects(const Ray<L, T, Q> &ray, const Triangle<L, T, Q> &triangle) {
+    T u, v, d(0);
+    return intersects(ray, triangle, d, u, v);
   }
 
   /// <summary>
@@ -412,7 +426,7 @@ namespace glm {
     template<glm::length_t L, typename T, qualifier Q>
     struct compute_to_string<Ray<L, T, Q>> {
       GLM_GEOM_QUALIFIER std::string call(const Ray<L, T, Q> &ray) {
-        return detail::format("Ray(%s, %s)",
+        return detail::format("ray(%s, %s)",
           glm::to_string(ray.pos).c_str(),
           glm::to_string(ray.dir).c_str()
         );

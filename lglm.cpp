@@ -7,6 +7,11 @@
 #define lglm_cpp
 #define LUA_CORE
 
+/* @TEMP Disallow 820a2c0e625f26000c688d841836bb10483be34d */
+#if defined(GLM_FORCE_QUAT_DATA_XYZW)
+  #error "glm broke compatbility, please compile without GLM_FORCE_QUAT_DATA_XYZW"
+#endif
+
 /*
 @@ LUA_API_LINKAGE is a mark for the linkage specification to core API functions
 */
@@ -47,7 +52,7 @@ extern LUA_API_LINKAGE {
 
 #define INVALID_VECTOR_TYPE "invalid " LABEL_VECTOR " type"
 #define INVALID_VECTOR_STRUCTURE "invalid " LABEL_VECTOR " structure"
-#define INVALID_VECTOR_DIMENSIONS "invalid " LABEL_VECTOR " dimension"
+#define INVALID_VECTOR_DIMENSIONS "invalid " LABEL_VECTOR " dimensions"
 #define INVALID_MATRIX_STRUCTURE "invalid " LABEL_MATRIX " structure"
 #define INVALID_MATRIX_DIMENSIONS "invalid " LABEL_MATRIX " dimension"
 
@@ -1035,8 +1040,12 @@ lua_Integer luaO_HashString(const char *string, size_t length, int ignore_case) 
   hash ^= (hash >> 11);
   hash += (hash << 15);
 
+#if defined(GRIT_POWER_UHASH)
+  return l_castU2S(hash);
+#else
   // @TODO: Eventually avoid sign-extension issues. If ever...
   return (lua_Integer)(int)hash;
+#endif
 }
 
 /* gritLua functions stored in lbaselib; considered deprecated */
@@ -1233,7 +1242,7 @@ LUA_API int lua_isvector (lua_State *L, int idx, int flags) {
 LUA_API int lua_tovector (lua_State *L, int idx, int flags, lua_Float4 *f4) {
   const TValue *o = glm_index2value(L, idx);
 
-  glmVector v;
+  glmVector v(glm::vec<4, glm_Float>(0));
   lu_byte variant = LUA_TNIL;
   if (ttisvector(o)) {
     v = glm_vvalue(o);
@@ -1280,8 +1289,13 @@ LUA_API void lua_pushvector (lua_State *L, lua_Float4 f4, int variant) {
   }
   else if (b_variant == LUA_VVECTOR1)
     lua_pushnumber(L, cast_num(f4.x));
-  else if (b_variant == LUA_VQUAT)
+  else if (b_variant == LUA_VQUAT) {
+#if defined(GLM_FORCE_QUAT_DATA_XYZW)
+    glm_pushvec_quat(L, glmVector(glm::qua<glm_Float>(f4.x, f4.y, f4.z, f4.w)));
+#else
     glm_pushvec_quat(L, glmVector(glm::qua<glm_Float>(f4.w, f4.x, f4.y, f4.z)));
+#endif
+  }
   else
     glm_pushvec(L, glmVector(glm::vec<4, glm_Float>(f4.x, f4.y, f4.z, f4.w)), glm_dimensions(b_variant));
 }
@@ -1538,9 +1552,9 @@ static int glm_createVector(lua_State *L, glm::length_t desiredSize = 0) {
   }
 
   if (desiredSize == 0 && v_len == 0)
-    return luaL_error(L, LABEL_VECTOR " requires 1 to 4 numbers");
+    return luaL_error(L, LABEL_VECTOR " requires 1 to 4 values");
   else if (desiredSize != 0 && v_len != desiredSize)
-    return luaL_error(L, LABEL_VECTOR "%d requires exactly %d number(s)", cast_int(desiredSize), cast_int(desiredSize));
+    return luaL_error(L, LABEL_VECTOR "%d requires 1 or %d values", cast_int(desiredSize), cast_int(desiredSize));
   else if (v_len == 1) {
     GLM_IF_CONSTEXPR(std::is_same<T, bool>::value)
       lua_pushboolean(L, cast_int(v.x));
@@ -1647,12 +1661,20 @@ LUA_API int glmVec_qua(lua_State *L) {
     if (ttisvector3(o2))  // <angle, axis>, degrees for gritLua compatibility
       return glm_pushquat(L, glm::angleAxis(cast_glmfloat(glm::radians(nvalue(o1))), glm_vecvalue(o2).v3));
     else if (ttisnumber(o2)) {  // <w, x, y, z>
+#if defined(GLM_FORCE_QUAT_DATA_XYZW)
+      const glm_Float w = cast_glmfloat(nvalue(o1));
+      const glm_Float x = cast_glmfloat(nvalue(o2));
+      const glm_Float y = cast_glmfloat(luaL_checknumber(L, 3));
+      const glm_Float z = cast_glmfloat(luaL_checknumber(L, 4));
+      return glm_pushquat(L, glm::qua<glm_Float>(x, y, z, w));
+#else
       return glm_pushquat(L, glm::qua<glm_Float>(
         cast_glmfloat(nvalue(o1)),
         cast_glmfloat(nvalue(o2)),
         cast_glmfloat(luaL_checknumber(L, 3)),
         cast_glmfloat(luaL_checknumber(L, 4)))
       );
+#endif
     }
     return luaL_error(L, "{w, x, y, z} or {angle, axis} expected");
   }

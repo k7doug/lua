@@ -354,19 +354,16 @@ namespace glm {
   }
 
   /// <summary>
-  ///
+  /// From_Z
   /// </summary>
-  /// <typeparam name="T"></typeparam>
-  /// <param name="v"></param>
-  /// <returns></returns>
   template<typename T, qualifier Q>
   GLM_FUNC_QUALIFIER vec<3, T, Q> perpendicularFast(const vec<3, T, Q> &v) {
     GLM_STATIC_ASSERT(std::numeric_limits<T>::is_iec559, "'perpendicularFast' only accept floating-point inputs");
-    if (abs(v.z) > one_over_root_two<T>()) {  // X-axis.
+    if (abs(v.z) > one_over_root_two<T>()) {  // YZ Plane
       const T k = 1 / sqrt(v.y * v.y + v.z * v.z);
       return vec<3, T, Q>(T(0), -v.z * k, v.y * k);
     }
-    else {  // Z-Axis.
+    else {  // XY Plane
       const T k = 1 / sqrt(v.x * v.x + v.y * v.y);
       return vec<3, T, Q>(-v.y * k, v.x * k, T(0));
     }
@@ -413,7 +410,7 @@ namespace glm {
   }
 
   /// <summary>
-  ///  Breaks this vector down into parallel and perpendicular components with respect to the given direction
+  /// Breaks this vector down into parallel and perpendicular components with respect to the given direction
   /// </summary>
   template<length_t L, typename T, qualifier Q>
   GLM_FUNC_QUALIFIER void projDecompose(const vec<L, T, Q> &v, const vec<L, T, Q> &direction, vec<L, T, Q> &outParallel, vec<L, T, Q> &outPerpendicular) {

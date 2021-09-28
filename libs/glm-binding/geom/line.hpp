@@ -32,11 +32,12 @@ namespace glm {
     Line(const Line<L, T, Q> &line)
       : pos(line.pos), dir(line.dir) {
     }
-
-    Ray<L, T, Q> toRay() const {
-      return Ray<L, T, Q>(pos, dir);
-    }
   };
+
+  // template<length_t L, typename T, qualifier Q>
+  // GLM_GEOM_QUALIFIER Ray<L, T, Q> toRay(const Line<L, T, Q> &line) {
+  //   return Ray<L, T, Q>(line.pos, line.dir;
+  // }
 
   template<length_t L, typename T, qualifier Q>
   static Line<L, T, Q> operator-(const Line<L, T, Q> &line) {
@@ -127,9 +128,19 @@ namespace glm {
     return any_notequal(x.pos, y.pos, MaxULPs) || any_notequal(x.dir, y.dir, MaxULPs);
   }
 
-  // Forward declaration
+  // Forward declarations
+
+  /// <summary>
+  /// Computes the closest point pair on two lines.
+  /// </summary>
   template<length_t L, typename T, qualifier Q>
   GLM_GEOM_QUALIFIER bool closestPointLineLine(const vec<L, T, Q> &v0, const vec<L, T, Q> &v10, const vec<L, T, Q> &v2, const vec<L, T, Q> &v32, T &d, T &d2);
+
+  /// <summary>
+  /// Compute the closest point (along an edge) between the triangle and provided line.
+  /// </summary>
+  template<length_t L, typename T, qualifier Q, typename Line>
+  GLM_GEOM_QUALIFIER_NOINLINE vec<L, T, Q> closestPointTriangleLine(const Triangle<L, T, Q> &t, const Line &line, T &outU, T &outV, T &outD);
 
   /// <summary>
   /// Tests if any component of the line is infinite.
@@ -200,6 +211,16 @@ namespace glm {
   }
 
   template<length_t L, typename T, qualifier Q>
+  GLM_GEOM_QUALIFIER vec<L, T, Q> closestPoint(const Line<L, T, Q> &line, const Triangle<L, T, Q> &triangle, T &d, T &u, T &v) {
+    d = intersectTriangleLine(triangle, line, u, v);  // Compute distance along line
+    if (d == std::numeric_limits<T>::infinity()) {
+      closestPointTriangleLine<L, T, Q, Line<L, T, Q>>(triangle, line, u, v, d);
+    }
+
+    return getPoint(line, d);
+  }
+
+  template<length_t L, typename T, qualifier Q>
   GLM_GEOM_QUALIFIER vec<L, T, Q> closestPoint(const Line<L, T, Q> &line, const vec<L, T, Q> &targetPoint) {
     T d(0);
     return closestPoint(line, targetPoint, d);
@@ -221,6 +242,12 @@ namespace glm {
   GLM_GEOM_QUALIFIER vec<L, T, Q> closestPoint(const Line<L, T, Q> &line, const Ray<L, T, Q> &ray) {
     T d(0), d2(0);
     return closestPoint(line, ray, d, d2);
+  }
+
+  template<length_t L, typename T, qualifier Q>
+  GLM_GEOM_QUALIFIER vec<L, T, Q> closestPoint(const Line<L, T, Q> &line, const Triangle<L, T, Q> &triangle) {
+    T u, v, d(0);
+    return closestPoint(line, triangle, d, u, v);
   }
 
   // Tests if the given object is fully contained on the line.
@@ -318,6 +345,11 @@ namespace glm {
   }
 
   template<length_t L, typename T, qualifier Q>
+  GLM_GEOM_QUALIFIER bool intersects(const Line<L, T, Q> &line, const Triangle<L, T, Q> &triangle, T &d, T &u, T &v) {
+    return intersects(triangle, line, u, v, d);
+  }
+
+  template<length_t L, typename T, qualifier Q>
   GLM_GEOM_QUALIFIER bool intersects(const Line<L, T, Q> &line, const AABB<L, T, Q> &aabb) {
     return intersects(aabb, line);
   }
@@ -332,6 +364,12 @@ namespace glm {
   GLM_GEOM_QUALIFIER bool intersects(const Line<L, T, Q> &line, const Plane<L, T, Q> &plane) {
     T d(0);
     return intersects(plane, line, d);
+  }
+
+  template<length_t L, typename T, qualifier Q>
+  GLM_GEOM_QUALIFIER bool intersects(const Line<L, T, Q> &line, const Triangle<L, T, Q> &triangle) {
+    T u, v, d(0);
+    return intersects(triangle, line, d, u, v);
   }
 
   /// <summary>
@@ -361,13 +399,10 @@ namespace glm {
     }
   }
 
-  /// <summary>
-  /// Computes the closest point pair on two lines.
-  /// </summary>
   template<length_t L, typename T, qualifier Q>
   GLM_GEOM_QUALIFIER bool closestPointLineLine(const vec<L, T, Q> &v0, const vec<L, T, Q> &v1, const vec<L, T, Q> &v2, const vec<L, T, Q> &v3, T &d, T &d2) {
     d = d2 = T(0);
-    if (glm::isNull(v1, epsilon<T>()) || glm::isNull(v3, epsilon<T>()))
+    if (isNull(v1, epsilon<T>()) || isNull(v3, epsilon<T>()))
       return false;
 
     const vec<L, T, Q> v4 = v0 - v2;
@@ -385,12 +420,11 @@ namespace glm {
     return true;
   }
 
-
   namespace detail {
     template<glm::length_t L, typename T, qualifier Q>
     struct compute_to_string<Line<L, T, Q>> {
       GLM_GEOM_QUALIFIER std::string call(const Line<L, T, Q> &line) {
-        return detail::format("Line(%s, %s)",
+        return detail::format("line(%s, %s)",
           glm::to_string(line.pos).c_str(),
           glm::to_string(line.dir).c_str()
         );

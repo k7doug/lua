@@ -55,6 +55,7 @@ namespace glm {
   template<length_t L, typename T, qualifier Q = defaultp> struct Line;
   template<length_t L, typename T, qualifier Q = defaultp> struct Ray;
   template<length_t L, typename T, qualifier Q = defaultp> struct LineSegment;
+  template<length_t L, typename T, qualifier Q = defaultp> struct Triangle;
   template<length_t L, typename T, qualifier Q = defaultp> struct Sphere;
   template<length_t L, typename T, qualifier Q = defaultp> struct Plane;
   template<length_t L, typename T, qualifier Q = defaultp> struct Polygon;

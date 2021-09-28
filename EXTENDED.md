@@ -68,6 +68,9 @@ matrix = mat(r_mat, ...)
     mat2x2(...), mat2x3(...), mat2x4(...),
     mat3x2(...), mat3x3(...), mat3x4(...),
     mat4x2(...), mat4x3(...), mat4x4(...)
+
+    Symmetric dimensionality:
+    mat2(...), mat3(...), mat4(...)
 --]]
 ```
 
@@ -1281,6 +1284,7 @@ bool = aabb2d.containsSegment(..., segStart --[[ vec2 ]], segEnd --[[ vec2 ]])
 bool = aabb.containsSphere(..., spherePos --[[ vec3 ]], sphereRad --[[ number ]])
 bool = aabb2d.containsSphere(..., spherePos --[[ vec2 ]], sphereRad --[[ number ]])
 
+bool = aabb.containsTriangle(..., ta --[[ vec3 ]], tb --[[ vec3 ]], tc --[[ vec3 ]])
 bool = aabb.containsPolygon(..., polygon --[[ polygon ]])
 ```
 
@@ -1291,6 +1295,7 @@ aabbMin,aabbMax = aabb.enclose(..., point --[[ vec3 ]])
 aabbMin,aabbMax = aabb.encloseSegment(..., segStart --[[ vec3 ]], segEnd --[[ vec3 ]])
 aabbMin,aabbMax = aabb.encloseSphere(..., spherePos --[[ vec3 ]], sphereRad --[[ number ]])
 aabbMin,aabbMax = aabb.encloseAABB(..., otherMin --[[ vec3 ]], otherMax --[[ vec3 ]])
+aabbMin,aabbMax = aabb.encloseTriangle(..., ta --[[ vec3 ]], tb --[[ vec3 ]], tc --[[ vec3 ]])
 aabbMin,aabbMax = aabb.enclosePolygon(..., polygon --[[ polygon ]])
 
 aabbMin,aabbMax = aabb2d.enclose(..., point --[[ vec2 ]])
@@ -1299,7 +1304,7 @@ aabbMin,aabbMax = aabb2d.encloseSphere(..., spherePos --[[ vec2 ]], sphereRad --
 aabbMin,aabbMax = aabb2d.encloseAABB(..., otherMin --[[ vec2 ]], otherMax --[[ vec2 ]])
 ```
 
-### aabb.intersect
+### aabb.intersects
 ```lua
 -- Functions to determine if the AABB to intersect the given objects.
 -- result --[[ bool ]]: True on intersection
@@ -1307,22 +1312,22 @@ aabbMin,aabbMax = aabb2d.encloseAABB(..., otherMin --[[ vec2 ]], otherMax --[[ v
 --           : passed as an optional parameter: a limit to the intersection
 --           : test, e.g., absolute distances (-100, 100) for lines/rays and
 --           : relative distances (0.25, 0.75) for segments.
-result = aabb.intersectAABB(..., otherMin --[[ vec3 ]], otherMax --[[ vec3 ]])
-result = aabb2d.intersectAABB(..., otherMin --[[ vec2 ]], otherMax --[[ vec2 ]])
+result = aabb.intersectsAABB(..., otherMin --[[ vec3 ]], otherMax --[[ vec3 ]])
+result = aabb2d.intersectsAABB(..., otherMin --[[ vec2 ]], otherMax --[[ vec2 ]])
 
-result = aabb.intersectSphere(..., spherePos --[[ vec3 ]], sphereRad --[[ number ]])
-result = aabb2d.intersectSphere(..., spherePos --[[ vec2 ]], sphereRad --[[ number ]])
+result = aabb.intersectsSphere(..., spherePos --[[ vec3 ]], sphereRad --[[ number ]])
+result = aabb2d.intersectsSphere(..., spherePos --[[ vec2 ]], sphereRad --[[ number ]])
 
-result = aabb.intersectPlane(..., planeNormal --[[ vec3 ]], planeOffset --[[ number]])
+result = aabb.intersectsPlane(..., planeNormal --[[ vec3 ]], planeOffset --[[ number]])
 
-result,dNear,dFar = aabb.intersectLine(..., linePos --[[ vec3 ]], lineDir --[[ vec3 ]], [dNear, dFar])
-result,dNear,dFar = aabb2d.intersectLine(..., linePos --[[ vec2 ]], lineDir --[[ vec2 ]], [dNear, dFar])
+result,dNear,dFar = aabb.intersectsLine(..., linePos --[[ vec3 ]], lineDir --[[ vec3 ]], [dNear, dFar])
+result,dNear,dFar = aabb2d.intersectsLine(..., linePos --[[ vec2 ]], lineDir --[[ vec2 ]], [dNear, dFar])
 
-result,dNear,dFar = aabb.intersectRay(..., rayPos --[[ vec3 ]], rayDir --[[ vec3 ]], [dNear, dFar])
-result,dNear,dFar = aabb2d.intersectRay(..., rayPos --[[ vec2 ]], rayDir --[[ vec2 ]], [dNear, dFar])
+result,dNear,dFar = aabb.intersectsRay(..., rayPos --[[ vec3 ]], rayDir --[[ vec3 ]], [dNear, dFar])
+result,dNear,dFar = aabb2d.intersectsRay(..., rayPos --[[ vec2 ]], rayDir --[[ vec2 ]], [dNear, dFar])
 
-result,dNear,dFar = aabb.intersectSegment(..., segStart --[[ vec3 ]], segEnd --[[ vec3 ]], [dNear, dFar])
-result,dNear,dFar = aabb2d.intersectSegment(..., segStart --[[ vec2 ]], segEnd --[[ vec2 ]], [dNear, dFar])
+result,dNear,dFar = aabb.intersectsSegment(..., segStart --[[ vec3 ]], segEnd --[[ vec3 ]], [dNear, dFar])
+result,dNear,dFar = aabb2d.intersectsSegment(..., segStart --[[ vec2 ]], segEnd --[[ vec2 ]], [dNear, dFar])
 ```
 
 ### aabb.intersection
@@ -1430,12 +1435,14 @@ parametricMin --[[ number ]], parametricMax --[[ number ]] = line.projectToAxis(
 ```lua
 -- Computes the closest point on this line to the given object
 -- d --[[ number ]]: Parametric distance along along the line,
--- d2 -- [[ number ]]: Parametric distance along the other object,
--- p --[[ vec3 ]]: Closest point.
+-- d2 --[[ number ]]: Parametric distance along the other object,
+-- u,v --[[ number ]]: Barycentric triangle coordinates.
+-- p --[[ vec3 ]]: Closest point,
 p,d = line.closest(..., point --[[ vec3 ]])
 p,d,d2 = line.closestRay(..., rayPos --[[ vec3 ]], rayDir --[[ vec3 ]])
 p,d,d2 = line.closestLine(..., otherPos --[[ vec3 ]], otherDir --[[ vec3 ]])
 p,d,d2 = line.closestSegment(..., segStart --[[ vec3 ]], segEnd --[[ vec3 ]])
+p,d,u,v = line.closestTriangle(..., ta --[[ vec3 ]], tb --[[ vec3 ]], tc --[[ vec3 ]])
 ```
 
 ### line.contains
@@ -1459,19 +1466,21 @@ dist,d,d2 = line.distanceSegment(..., segStart --[[ vec3 ]], segEnd --[[ vec3 ]]
 dist = line.distanceSphere(..., spherePos --[[ vec3 ]], sphereRad --[[ number ]])
 ```
 
-### line.intersect
+### line.intersects
 ```lua
 -- Tests whether the line and the given object intersect
-bool = line.intersectPlane(..., planeNormal --[[ vec3 ]], planeOffset --[[ number ]])
+bool = line.intersectsPlane(..., planeNormal --[[ vec3 ]], planeOffset --[[ number ]])
 
 -- count --[[ integer ]]: Number of intersection points between the object and
 --                      : sphere: 0, 1 (dNear), or 2 (dNear & dFar)
+-- u,v --[[ number ]]: Barycentric triangle coordinates.
 -- dNear/dFar: Distances along the object where it enters/exits the line. When
 --           : passed as an optional parameter: a limit to the intersection
 --           : test, e.g., absolute distances (-100, 100) for lines/rays and
 --           : relative distances (0.25, 0.75) for segments.
-bool,dNear,dFar = line.intersectAABB(..., aabbMin --[[ vec3 ]], aabbMax --[[ vec3 ]], [dNear, dFar])
-count,dNear,dFar = line.intersectSphere(..., spherePos --[[ vec3 ]], sphereRad --[[ number ]], [dNear, dFar])
+bool,dNear,dFar = line.intersectsAABB(..., aabbMin --[[ vec3 ]], aabbMax --[[ vec3 ]], [dNear, dFar])
+bool,dNear,u,v = line.intersectsTriangle(..., ta --[[ vec3 ]], tb --[[ vec3 ]], tc --[[ vec3 ]])
+count,dNear,dFar = line.intersectsSphere(..., spherePos --[[ vec3 ]], sphereRad --[[ number ]], [dNear, dFar])
 ```
 
 ## Ray
@@ -1562,7 +1571,7 @@ vec3 = ray.getPoint(..., distance --[[ number ]])
 -- an axis
 --
 -- d --[[ number ]]: Parametric distance along along the ray,
--- d2 -- [[ number ]]: Parametric distance along the other object.
+-- d2 --[[ number ]]: Parametric distance along the other object.
 d,d2 = ray.projectToAxis(..., direction --[[ vec3 ]])
 ```
 
@@ -1570,7 +1579,7 @@ d,d2 = ray.projectToAxis(..., direction --[[ vec3 ]])
 ```lua
 -- Computes the closest point on this ray to the given object
 -- d --[[ number ]]: Parametric distance along along the ray,
--- d2 -- [[ number ]]: Parametric distance along the other object,
+-- d2 --[[ number ]]: Parametric distance along the other object,
 -- p --[[ vec3 ]]: Closest point
 p,d = ray.closest(..., point --[[ vec3 ]])
 p,d,d2 = ray.closestRay(..., otherPos --[[ vec3 ]], otherDir --[[ vec3 ]])
@@ -1589,7 +1598,7 @@ bool = ray.containsSegment(..., segStart --[[ vec3 ]], segEnd --[[ vec3 ]])
 ```lua
 -- Computes the distance between the ray and the given object
 -- d --[[ number ]]: Parametric distance along along the ray,
--- d2 -- [[ number ]]: Parametric distance along the other object,
+-- d2 --[[ number ]]: Parametric distance along the other object,
 -- dist --[[ number ]]: Distance between the ray and other object
 dist,d = ray.distance(..., point --[[ vec3 ]])
 dist,d,d2 = ray.distanceLine(..., linePos --[[ vec3 ]], lineDir --[[ vec3 ]])
@@ -1598,18 +1607,20 @@ dist,d,d2 = ray.distanceSegment(..., segStart --[[ vec3 ]], segEnd --[[ vec3 ]])
 dist = ray.distanceSphere(..., spherePos --[[ vec3 ]], sphereRad --[[ number ]])
 ```
 
-### ray.intersect
+### ray.intersects
 ```lua
 -- Tests whether the ray and the given object intersect
 -- count --[[ integer ]]: Number of intersection points between the object and
 --                      : sphere: 0, 1 (dNear), or 2 (dNear & dFar)
+-- u,v --[[ number ]]: Barycentric triangle coordinates.
 -- dNear/dFar: Distances along the object where it enters/exits the ray. When
 --           : passed as an optional parameter: a limit to the intersection
 --           : test, e.g., absolute distances (-100, 100) for lines/rays and
 --           : relative distances (0.25, 0.75) for segments.
-bool,dNear,dFar = ray.intersectAABB(..., aabbMin --[[ vec3 ]], aabbMax --[[ vec3 ]], [dNear, dFar])
-bool,dNear = ray.intersectPlane(..., planeNormal --[[ vec3 ]], planeOffset --[[ number ]], [dNear, dFar])
-count,dNear,dFar = ray.intersectSphere(..., spherePos --[[ vec3 ]], sphereRad --[[ number ]], [dNear, dFar])
+bool,dNear,dFar = ray.intersectsAABB(..., aabbMin --[[ vec3 ]], aabbMax --[[ vec3 ]], [dNear, dFar])
+bool,dNear = ray.intersectsPlane(..., planeNormal --[[ vec3 ]], planeOffset --[[ number ]], [dNear, dFar])
+bool,dNear,u,v = line.intersectsTriangle(..., ta --[[ vec3 ]], tb --[[ vec3 ]], tc --[[ vec3 ]])
+count,dNear,dFar = ray.intersectsSphere(..., spherePos --[[ vec3 ]], sphereRad --[[ number ]], [dNear, dFar])
 ```
 
 ## Segment
@@ -1742,12 +1753,14 @@ vec2 = segment2d.extremePoint(..., direction --[[ vec2 ]])
 ```lua
 -- Computes the closest point on this segment to the given object.
 -- d --[[ number ]]: Parametric distance along along the line,
--- d2 -- [[ number ]]: Parametric distance along the other object,
+-- d2 --[[ number ]]: Parametric distance along the other object,
+-- u,v --[[ number ]]: Barycentric triangle coordinates.
 -- p --[[ vec3 ]]: Closest point
 p,d = segment.closestPoint(..., point --[[ vec3 ]])
 p,d,d2 = segment.closestRay(..., rayPos --[[ vec3 ]], rayDir --[[ vec3 ]])
 p,d,d2 = segment.closestLine(..., linePos --[[ vec3 ]], lineDir --[[ vec3 ]])
 p,d,d2 = segment.closestSegment(..., segStart --[[ vec3 ]], segEnd --[[ vec3 ]])
+p,d,u,v = segment.closestTriangle(..., ta --[[ vec3 ]], tb --[[ vec3 ]], tc --[[ vec3 ]])
 
 p,d = segment2d.closestPoint(..., point --[[ vec2 ]])
 p,d,d2 = segment2d.closestRay(..., rayPos --[[ vec2 ]], rayDir --[[ vec2 ]])
@@ -1794,11 +1807,12 @@ dist,d,d2 = segment.distanceSegment2(..., segStart --[[ vec3 ]], segEnd --[[ vec
 dist,d,d2 = segment2d.distanceSegment2(..., segStart --[[ vec2 ]], segEnd --[[ vec2 ]])
 ```
 
-### segment.intersect
+### segment.intersects
 ```lua
 -- Tests whether the segment and the given object intersect
 -- d --[[ number ]]: Parametric distance along along the segment,
 -- d2 --[[ number ]]: Parametric distance along the other object,
+-- u,v --[[ number ]]: Barycentric triangle coordinates.
 -- count --[[ integer ]]: Number of intersection points between the line and
 --                      : sphere: 0, 1 (dNear), or 2 (dNear & dFar)
 bool,d,d2 = segment.intersectsAABB(..., aabbMin --[[ vec3 ]], aabbMax --[[ vec3 ]])
@@ -1808,6 +1822,7 @@ bool,d,d2 = segment.intersectsSegment(..., segStart --[[ vec3 ]], segEnd --[[ ve
 bool,d,d2 = segment2d.intersectsSegment(..., segStart --[[ vec2 ]], segEnd --[[ vec2 ]], epsilon --[[ number ]])
 
 bool,d = segment.intersectsPlane(..., planeNormal --[[ vec3 ]], planeOffset --[[ number ]])
+bool,d,u,v = segment.intersectsTriangle(..., ta --[[ vec3 ]], tb --[[ vec3 ]], tc --[[ vec3 ]])
 count,dNear,dFar = segment.intersectsSphere(..., spherePos --[[ vec3 ]], sphereRad --[[ number ]])
 ```
 
@@ -1947,6 +1962,8 @@ circlePos,circleRad = circle.encloseCircle(..., otherPos --[[ vec2 ]], otherRad 
 
 spherePos,sphereRad = sphere.encloseAABB(..., aabbMin --[[ vec3 ]], aabbMax --[[ vec3 ]])
 circlePos,circleRad = circle.encloseAABB(..., aabbMin --[[ vec2 ]], aabbMax --[[ vec2 ]])
+
+spherePos,sphereRad = sphere.encloseTriangle(..., ta --[[ vec3 ]], tb --[[ vec3 ]], tc --[[ vec3 ]])
 ```
 
 ### sphere.extendRadiusToContain
@@ -2008,6 +2025,8 @@ bool = circle.containsCircle(..., otherPos --[[ vec2 ]], otherRad --[[ number ]]
 
 bool = sphere.containsAABB(..., aabbMin --[[ vec3 ]], aabbMax --[[ vec3 ]])
 bool = circle.containsAABB(..., aabbMin --[[ vec2 ]], aabbMax --[[ vec2 ]])
+
+bool = sphere.containsTriangle(..., ta --[[ vec3 ]], tb --[[ vec3 ]], tc --[[ vec3 ]])
 ```
 
 ### sphere.distance
@@ -2030,19 +2049,23 @@ number = circle.distanceSegment(..., segStart --[[ vec2 ]], segEnd --[[ vec2 ]])
 
 number = sphere.distanceLine(..., linePos --[[ vec3 ]], lineDir --[[ vec3 ]])
 number = circle.distanceLine(..., linePos --[[ vec2 ]], lineDir --[[ vec2 ]])
+
+number = sphere.distanceTriangle(..., ta --[[ vec3 ]], tb --[[ vec3 ]], tc --[[ vec3 ]])
 ```
 
-### sphere.intersect
+### sphere.intersects
 ```lua
 -- Tests whether the sphere and the given object intersect
-bool = sphere.intersectSphere(..., otherPos --[[ vec3 ]], otherRad --[[ number ]])
-bool = circle.intersectCircle(..., otherPos --[[ vec2 ]], otherRad --[[ number ]])
+bool = sphere.intersectsSphere(..., otherPos --[[ vec3 ]], otherRad --[[ number ]])
+bool = circle.intersectsCircle(..., otherPos --[[ vec2 ]], otherRad --[[ number ]])
 
-bool = sphere.intersectAABB(..., aabbMin --[[ vec3 ]], aabbMax --[[ vec3 ]])
-bool = circle.intersectAABB(..., aabbMin --[[ vec2 ]], aabbMax --[[ vec2 ]])
+bool = sphere.intersectsAABB(..., aabbMin --[[ vec3 ]], aabbMax --[[ vec3 ]])
+bool = circle.intersectsAABB(..., aabbMin --[[ vec2 ]], aabbMax --[[ vec2 ]])
 
-bool = sphere.intersectPlane(..., planeNormal --[[ vec3 ]], planeOffset --[[ number ]])
-bool = circle.intersectPlane(..., planeNormal --[[ vec2 ]], planeOffset --[[ number ]])
+bool = sphere.intersectsPlane(..., planeNormal --[[ vec3 ]], planeOffset --[[ number ]])
+bool = circle.intersectsPlane(..., planeNormal --[[ vec2 ]], planeOffset --[[ number ]])
+
+bool = sphere.intersectsTriangle(..., ta --[[ vec3 ]], tb --[[ vec3 ]], tc --[[ vec3 ]])
 
 -- count --[[ integer ]]: Number of intersection points between the ray and
 --                      : sphere: 0, 1 (dNear), or 2 (dFar).
@@ -2050,14 +2073,14 @@ bool = circle.intersectPlane(..., planeNormal --[[ vec2 ]], planeOffset --[[ num
 --           : passed as an optional parameter: a limit to the intersection
 --           : test, e.g., absolute distances (-100, 100) for lines/rays and
 --           : relative distances (0.25, 0.75) for segments.
-count,dNear,dFar = sphere.intersectLine(..., linePos --[[ vec3 ]], lineDir --[[ vec3 ]], [dNear, dFar])
-count,dNear,dFar = circle.intersectLine(..., linePos --[[ vec2 ]], lineDir --[[ vec2 ]], [dNear, dFar])
+count,dNear,dFar = sphere.intersectsLine(..., linePos --[[ vec3 ]], lineDir --[[ vec3 ]], [dNear, dFar])
+count,dNear,dFar = circle.intersectsLine(..., linePos --[[ vec2 ]], lineDir --[[ vec2 ]], [dNear, dFar])
 
-count,dNear,dFar = sphere.intersectSegment(..., segStart --[[ vec3 ]], segEnd --[[ vec3 ]], [dNear, dFar])
-count,dNear,dFar = circle.intersectSegment(..., segStart --[[ vec2 ]], segEnd --[[ vec2 ]], [dNear, dFar])
+count,dNear,dFar = sphere.intersectsSegment(..., segStart --[[ vec3 ]], segEnd --[[ vec3 ]], [dNear, dFar])
+count,dNear,dFar = circle.intersectsSegment(..., segStart --[[ vec2 ]], segEnd --[[ vec2 ]], [dNear, dFar])
 
-count,dNear,dFar = sphere.intersectRay(..., rayPos --[[ vec3 ]], rayDir --[[ vec3 ]], [dNear, dFar])
-count,dNear,dFar = circle.intersectRay(..., rayPos --[[ vec2 ]], rayDir --[[ vec2 ]], [dNear, dFar])
+count,dNear,dFar = sphere.intersectsRay(..., rayPos --[[ vec3 ]], rayDir --[[ vec3 ]], [dNear, dFar])
+count,dNear,dFar = circle.intersectsRay(..., rayPos --[[ vec2 ]], rayDir --[[ vec2 ]], [dNear, dFar])
 ```
 
 ## Plane:
@@ -2154,6 +2177,15 @@ bool = plane.isParallel(..., otherNormal --[[ vec3 ]], otherOffset --[[ number ]
 bool = plane.areOnSameSide(..., point --[[ vec3 ]], other --[[ vec3 ]])
 ```
 
+### plane.examineSide
+```lua
+-- Triangle/Plane intersection test. Returning
+--   1 - If the triangle is completely in the positive half-space of the plane;
+--  -1 - If the triangle is completely in the negative half-space of the plane;
+--   0 - If the triangle intersects the plane.
+result --[[ int ]] = plane.examineSide(..., ta --[[ vec3 ]], tb --[[ vec3 ]], tc --[[ vec3 ]], epsilon --[[ number ]])
+```
+
 ### plane.isInPositiveDirection
 ```lua
 -- Tests if the given direction vector points towards the positive side of the
@@ -2219,6 +2251,7 @@ vec3 = plane.project(..., point --[[ vec3 ]])
 linePos --[[ vec3 ]], lineDir --[[ vec3 ]] = plane.projectLine(..., linePos --[[ vec3 ]], lineDir --[[ vec3 ]])
 segStart --[[ vec3 ]], segEnd --[[ vec3 ]] = plane.projectSegment(..., segStart --[[ vec3 ]], segEnd --[[ vec3 ]])
 rayPos --[[ vec3 ]], rayDir --[[ vec3 ]] = plane.projectRay(..., rayPos --[[ vec3 ]], rayDir --[[ vec3 ]])
+ta,tb,tc --[[ vec3 ]] = plane.projectTriangle(..., ta --[[ vec3 ]], tb --[[ vec3 ]], tc --[[ vec3 ]])
 ```
 
 ### plane.projectToNegativeHalf
@@ -2277,6 +2310,15 @@ segStart --[[ vec3 ]], segEnd --[[ vec3 ]] = plane.clipSegment(...,
 )
 ```
 
+### plane.clipTriangle
+```lua
+-- Clip a triangle against the plane, i.e., create one or more triangles that
+-- reside strictly in the positive/negative halfspaces of the plane.
+pa,pb,pc --[[ vec3 ]], na,nb,nc --[[ vec3 ]] = plane.clipTriangle(...,
+    ta --[[ vec3 ]], tb --[[ vec3 ]], tc --[[ vec3 ]]
+)
+```
+
 ### plane.closest
 ```lua
 -- Computes the closest point on this plane to the given object
@@ -2303,6 +2345,7 @@ number = plane.signedDistanceSegment(..., segStart --[[ vec3 ]], segEnd --[[ vec
 number = plane.signedDistanceRay(..., rayPos --[[ vec3 ]], rayDir --[[ vec3 ]])
 number = plane.signedDistanceAABB(..., aabbMin --[[ vec3 ]], aabbMax --[[ vec3 ]])
 number = plane.signedDistanceSphere(..., spherePos --[[ vec3 ]], sphereRad --[[ number ]])
+number = plane.signedDistanceTriangle(..., ta --[[ vec3 ]], tb --[[ vec3 ]], tc --[[ vec3 ]])
 ```
 
 ### plane.contains
@@ -2312,9 +2355,10 @@ bool = plane.contains(..., point --[[ vec3 ]])
 bool = plane.containsLine(..., linePos --[[ vec3 ]], lineDir --[[ vec3 ]])
 bool = plane.containsRay(..., rayPos --[[ vec3 ]], rayDir --[[ vec3 ]])
 bool = plane.containsSegment(..., segStart --[[ vec3 ]], segEnd --[[ vec3 ]])
+bool = plane.containsTriangle(..., ta --[[ vec3 ]], tb --[[ vec3 ]], tc --[[ vec3 ]])
 ```
 
-### plane.intersect
+### plane.intersects
 ```lua
 -- Tests whether the plane and the given object intersect
 bool,dist --[[ number ]] = plane.intersectsRay(..., rayPos --[[ vec3 ]], rayDir --[[ vec3 ]])
@@ -2322,6 +2366,7 @@ bool,dist --[[ number ]] = plane.intersectsLine(..., linePos --[[ vec3 ]], lineD
 bool,dist --[[ number ]] = plane.intersectsSegment(..., segStart --[[ vec3 ]], segEnd --[[ vec3 ]])
 bool = plane.intersectsSphere(..., spherePos --[[ vec3 ]], sphereRad --[[ number ]])
 bool = plane.intersectsAABB(..., aabbMin --[[ vec3 ]], aabbMax --[[ vec3 ]])
+bool = plane.intersectsTriangle(..., ta --[[ vec3 ]], tb --[[ vec3 ]], tc --[[ vec3 ]])
 ```
 
 ## Polygon:
@@ -2627,11 +2672,8 @@ aabbMin --[[ vec3 ]], aabbMax --[[ vec3 ]] = polygon.minimalEnclosingAABB(...)
 -- Thickness emanates from the plane: 0.5 * thickness in each half-space.
 bool = polygon.contains(..., point --[[ vec3 ]], thickness --[[ number ]])
 bool = polygon.containsPolygon(..., otherPolygon --[[ userdata ]])
-bool = polygon.containsSegment(...,
-    segStart --[[ vec3 ]],
-    segEnd --[[ vec3 ]],
-    thickness --[[ number ]])
-)
+bool = polygon.containsSegment(..., segStart --[[ vec3 ]], segEnd --[[ vec3 ]], thickness --[[ number ]]))
+bool = polygon.containsTriangle(..., ta --[[ vec3 ]], tb --[[ vec3 ]], tc --[[ vec3 ]], thickness --[[ number ]])
 
 -- Thickness expands only in the positive half-space, emanating from the plane
 bool = polygon.containsAbove(..., point --[[ vec3 ]], thickness --[[ number ]])
@@ -2644,7 +2686,7 @@ bool = polygon.containsBelow(..., point --[[ vec3 ]], thickness --[[ number ]])
 bool = polygon.containsSegment2D(..., segStart --[[ vec3 ]], segEnd --[[ vec3 ]])
 ```
 
-### polygon.intersect
+### polygon.intersects
 ```lua
 -- Tests whether the polygon and the given object(s) intersect
 bool = polygon.intersectsLine(..., linePos --[[ vec3 ]], lineDir --[[ vec3 ]])
