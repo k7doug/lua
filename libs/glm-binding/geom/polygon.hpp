@@ -13,6 +13,7 @@
 #include "linesegment.hpp"
 #include "aabb.hpp"
 #include "plane.hpp"
+#include "triangle.hpp"
 
 namespace glm {
   /// <summary>
@@ -45,8 +46,8 @@ namespace glm {
 
     List<Point> *p;  // Stores the vertices of this polygon.
 
-    // Reference to the stack index the Polygon userdata belongs to; note this
-    // is a Lua-specific hack.
+    // @LuaGLM Reference to the stack index the Polygon userdata belongs to;
+    // note this is a Lua-specific hack.
     int stack_idx;
 
     Polygon(List<Point> *points = GLM_NULLPTR)
@@ -557,8 +558,8 @@ namespace glm {
   template<typename T, qualifier Q>
   GLM_GEOM_QUALIFIER_NOINLINE Plane<3, T, Q> planeCCW(const Polygon<3, T, Q> &polygon) {
     const size_t p_size = polygon.size();
-    const vec<3, T, Q> hint = glm::unit::forward<T, Q>();
-    const vec<3, T, Q> hint2 = glm::unit::up<T, Q>();
+    const vec<3, T, Q> hint = unit::forward<T, Q>();
+    const vec<3, T, Q> hint2 = unit::up<T, Q>();
     if (p_size > 3) {
       Plane<3, T, Q> plane;
       for (size_t i = 0; i < p_size - 2; ++i) {
@@ -589,7 +590,7 @@ namespace glm {
       return planeFrom(Line<3, T, Q>(polygon[0], dir), perpendicular(dir, hint, hint2));
     }
     else if (p_size == 1)
-      return planeFrom(polygon[0], glm::unit::up<T, Q>());
+      return planeFrom(polygon[0], unit::up<T, Q>());
     else
       return Plane<3, T, Q>();
   }
@@ -767,6 +768,13 @@ namespace glm {
         return false;
     }
     return true;
+  }
+
+  template<typename T, qualifier Q>
+  GLM_GEOM_QUALIFIER bool contains(const Polygon<3, T, Q> &polygon, const Triangle<3, T, Q> &worldSpaceTriangle, T polygonThickness = epsilon<T>()) {
+    return contains(polygon, edge(worldSpaceTriangle, 0), polygonThickness)
+           && contains(polygon, edge(worldSpaceTriangle, 1), polygonThickness)
+           && contains(polygon, edge(worldSpaceTriangle, 2), polygonThickness);
   }
 
   /// Tests whether the polygon and the given object intersect.

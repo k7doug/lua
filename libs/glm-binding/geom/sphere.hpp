@@ -10,6 +10,8 @@
 #include "line.hpp"
 #include "linesegment.hpp"
 #include "ray.hpp"
+#include "triangle.hpp"
+#include "polygon.hpp"
 
 namespace glm {
   /// <summary>
@@ -58,7 +60,7 @@ namespace glm {
         const T halfDist = (dist - r) * T(0.5);
 
         pos += d * halfDist / dist;
-        r += halfDist + epsilon<T>();  // Use a fixed epsilon deliberately
+        r += halfDist + epsilon<T>();  // deliberately use a fixed epsilon
       }
     }
   };
@@ -286,6 +288,13 @@ namespace glm {
     return true;
   }
 
+  template<length_t L, typename T, qualifier Q>
+  GLM_GEOM_QUALIFIER bool contains(const Sphere<L, T, Q> &sphere, const Triangle<L, T, Q> &triangle, T eps = epsilon<T>()) {
+    return contains(sphere, triangle.a, eps)
+           && contains(sphere, triangle.b, eps)
+           && contains(sphere, triangle.c, eps);
+  }
+
   // Computes the distance between the sphere and the given object.
 
   template<length_t L, typename T, qualifier Q>
@@ -323,22 +332,27 @@ namespace glm {
     return distance(plane, sphere);
   }
 
+  template<length_t L, typename T, qualifier Q>
+  GLM_GEOM_QUALIFIER T distance(const Sphere<L, T, Q> &sphere, const Triangle<L, T, Q> &triangle) {
+    return distance(triangle, sphere);
+  }
+
   /// Tests whether the sphere and the given object intersect.
 
   /// <summary>
   /// Generic Line/Sphere Intersection
   /// </summary>
-  /// <returns>The number of intersection points, 0, 1, or 2. </returns>
+  /// <returns>The number of intersection points, 0, 1, or 2.</returns>
   template<length_t L, typename T, qualifier Q>
-  GLM_GEOM_QUALIFIER int intersectLine(const vec<L, T, Q> &linePos, const vec<L, T, Q> &lineDir, const vec<L, T, Q> &sphereCenter, T sphereRadius, T &t1, T &t2) {
+  GLM_GEOM_QUALIFIER int intersectLine(const Line<L, T, Q> &line, const Sphere<L, T, Q> &sphere, T &t1, T &t2) {
     t1 = std::numeric_limits<T>::infinity();
     t2 = -std::numeric_limits<T>::infinity();
     GLM_GEOM_ASSUME(isNormalized(lineDir, epsilon<T>()), 0);
 
-    const vec<L, T, Q> a = linePos - sphereCenter;
-    const T radSq = sphereRadius * sphereRadius;
+    const vec<L, T, Q> a = line.pos - sphere.pos;
+    const T radSq = sphere.r * sphere.r;
     const T C = dot(a, a) - radSq;
-    const T B = T(2) * dot(a, lineDir);
+    const T B = T(2) * dot(a, line.dir);
 
     T D = B * B - T(4) * C;
     if (D < T(0))  // No intersections.
@@ -362,12 +376,12 @@ namespace glm {
 
   template<length_t L, typename T, qualifier Q>
   GLM_GEOM_QUALIFIER int intersects(const Sphere<L, T, Q> &sphere, const Line<L, T, Q> &line, T &t1, T &t2) {
-    return intersectLine(line.pos, line.dir, sphere.pos, sphere.r, t1, t2);
+    return intersectLine(line, sphere, t1, t2);
   }
 
   template<length_t L, typename T, qualifier Q>
   GLM_GEOM_QUALIFIER int intersects(const Sphere<L, T, Q> &sphere, const LineSegment<L, T, Q> &line, T &t1, T &t2) {
-    const int numIntersections = intersectLine(line.a, line.dir(), sphere.pos, sphere.r, t1, t2);
+    const int numIntersections = intersectLine(toLine(line), sphere, t1, t2);
     if (numIntersections == 0)
       return 0;
 
@@ -382,7 +396,7 @@ namespace glm {
 
   template<length_t L, typename T, qualifier Q>
   GLM_GEOM_QUALIFIER int intersects(const Sphere<L, T, Q> &sphere, const Ray<L, T, Q> &ray, T &t1, T &t2) {
-    int numIntersections = intersectLine(ray.pos, ray.dir, sphere.pos, sphere.r, t1, t2);
+    int numIntersections = intersectLine(toLine(ray), sphere, t1, t2);
     if (t1 < T(0) && numIntersections == 2)  // behind the ray.
       t1 = t2;
     return (t1 >= T(0)) ? numIntersections : 0;  // otherwise, negative direction of the ray.
@@ -398,7 +412,50 @@ namespace glm {
     return intersects(plane, sphere);
   }
 
+  template<length_t L, typename T, qualifier Q>
+  GLM_GEOM_QUALIFIER bool intersects(const Sphere<L, T, Q> &sphere, const Triangle<L, T, Q> &triangle) {
+    vec<L, T, Q> intersectionPt;
+    return intersects(triangle, sphere, intersectionPt);
+  }
+
   /// Expands this sphere to enclose both the sphere and the given object.
+
+  /// <summary>
+  /// Fetch each corner point of the given object: Then enclose points by
+  /// furthest distance from sphere to smallest to ensure an optimal enclosure.
+  /// </summary>
+  template<length_t L, typename T, qualifier Q, typename Object, int NumCorners>
+  static Sphere<L, T, Q> _enclose(const Sphere<L, T, Q> &sphere, const Object &obj) {
+    struct Tuple {
+      int idx;
+      vec<L, T, Q> point;
+      T distance;
+      bool operator<(const Tuple &rhs) const {
+        return (distance == rhs.distance) ? idx < rhs.idx : distance < rhs.distance;
+      }
+    };
+
+    Tuple corners[NumCorners];
+    for (int i = 0; i < NumCorners; ++i) {
+      const vec<L, T, Q> point = cornerPoint(obj, i);
+      corners[i] = { i, point, distance2(sphere.pos, point) };
+    }
+
+#if GLM_HAS_CXX11_STL
+    std::sort(corners, corners + NumCorners);
+#else
+    qsort(corners, NumCorners, sizeof(Tuple), [](const void *a, const void *b) -> int {
+      const Tuple &t_a = *static_cast<const Tuple *>(a);
+      const Tuple &t_b = *static_cast<const Tuple *>(b);
+      return (t_a < t_b) ? 1 : ((t_b < t_a) ? -1 : (t_a.idx - t_b.idx));
+    });
+#endif
+
+    Sphere<L, T, Q> result(sphere);
+    for (int i = NumCorners - 1; i >= 0; --i)
+      result.enclose(corners[i].point);
+    return result;
+  }
 
   template<length_t L, typename T, qualifier Q>
   GLM_GEOM_QUALIFIER Sphere<L, T, Q> enclose(const Sphere<L, T, Q> &sphere, const vec<L, T, Q> &point, T eps = epsilon<T>()) {
@@ -423,28 +480,12 @@ namespace glm {
 
   template<length_t L, typename T, qualifier Q>
   GLM_GEOM_QUALIFIER Sphere<L, T, Q> enclose(const Sphere<L, T, Q> &sphere, const AABB<L, T, Q> &aabb) {
-    struct Tuple {
-      T d;
-      typename Sphere<L, T, Q>::Point pt;
-      bool operator<(const Tuple &rhs) const {
-        return d < rhs.d;
-      }
-    };
+    return _enclose<L, T, Q, AABB<L, T, Q>, 8>(sphere, aabb);
+  }
 
-    // Enclose points by furthest distance from sphere to smallest to ensure an
-    // optimal enclosure.
-    Tuple corners[8];
-    for (int i = 0; i < 8; ++i) {
-      corners[i].pt = cornerPoint(aabb, i);
-      corners[i].d = distance2(sphere.pos, corners[i].pt);
-    }
-
-    std::sort(corners, corners + 8);
-
-    Sphere<L, T, Q> result(sphere);
-    for (int i = 7; i >= 0; --i)
-      result.enclose(corners[i].pt);
-    return result;
+  template<length_t L, typename T, qualifier Q>
+  GLM_GEOM_QUALIFIER Sphere<L, T, Q> enclose(const Sphere<L, T, Q> &sphere, const Triangle<L, T, Q> &triangle) {
+    return _enclose<L, T, Q, Triangle<L, T, Q>, 3>(sphere, triangle);
   }
 
   template<length_t L, typename T, qualifier Q>
@@ -769,7 +810,7 @@ namespace glm {
     struct compute_to_string<Sphere<L, T, Q>> {
       GLM_GEOM_QUALIFIER std::string call(const Sphere<L, T, Q> &sphere) {
         char const *LiteralStr = literal<T, std::numeric_limits<T>::is_iec559>::value();
-        std::string FormatStr(detail::format("Sphere(%s, %s)", "%s", LiteralStr));
+        std::string FormatStr(detail::format("sphere(%%s, %s)", LiteralStr));
 
         return detail::format(FormatStr.c_str(), glm::to_string(sphere.pos).c_str(),
           static_cast<typename cast<T>::value_type>(sphere.r)

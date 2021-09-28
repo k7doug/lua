@@ -19,6 +19,7 @@
 #include "geom/line.hpp"
 #include "geom/linesegment.hpp"
 #include "geom/ray.hpp"
+#include "geom/triangle.hpp"
 #include "geom/sphere.hpp"
 #include "geom/plane.hpp"
 #include "geom/polygon.hpp"
@@ -64,6 +65,30 @@
   B::Near::type n = B::Near::Next(LB);  \
   B::Far::type f = B::Far::Next(LB);    \
   TRAITS_PUSH(LB, F(a, b, n, f), n, f); \
+  LUA_MLM_END
+
+/*
+** Intersection test with a result (e.g., boolean), UV coordinates, and a
+** distance along the object
+*/
+#define GEOM_INTERSECTS_UV(LB, F, A, B)       \
+  LUA_MLM_BEGIN                               \
+  const A::type a = A::Next(LB);              \
+  const B::type b = B::Next(LB);              \
+  A::value_type x(0), y(0), z(0);             \
+  TRAITS_PUSH(LB, F(a, b, x, y, z), x, y, z); \
+  LUA_MLM_END
+
+/*
+** Intersection test with a result (e.g., boolean) and a single intersection
+** object that may also be returned.
+*/
+#define GEOM_INTERSECTS_PT(LB, F, A, B) \
+  LUA_MLM_BEGIN                         \
+  A::Point::type pt = A::Point::zero(); \
+  const A::type a = A::Next(LB);        \
+  const B::type b = B::Next(LB);        \
+  TRAITS_PUSH(LB, F(a, b, pt), pt);     \
   LUA_MLM_END
 
 /*
@@ -145,6 +170,17 @@ struct gLuaRay : gLuaSharedTrait<T, glm::Ray<L, T>> {
   LUA_TRAIT_QUALIFIER GLM_CONSTEXPR glm::Ray<L, T> zero() { return glm::Ray<L, T>(T(0)); }
   LUA_TRAIT_QUALIFIER bool Is(gLuaBase &LB, int idx) {
     return Point::Is(LB, idx) && Point::Is(LB, idx + 1);
+  }
+};
+
+template<glm::length_t L = 3, typename T = glm_Float>
+struct gLuaTriangle : gLuaSharedTrait<T, glm::Triangle<L, T>> {
+  using Point = gLuaTrait<typename glm::Triangle<L, T>::Point>;
+
+  static GLM_CONSTEXPR const char *Label() { return "Triangle"; }
+  LUA_TRAIT_QUALIFIER GLM_CONSTEXPR glm::Triangle<L, T> zero() { return glm::Triangle<L, T>(T(0)); }
+  LUA_TRAIT_QUALIFIER bool Is(gLuaBase &LB, int idx) {
+    return Point::Is(LB, idx) && Point::Is(LB, idx + 1) && Point::Is(LB, idx + 2);
   }
 };
 
@@ -251,20 +287,23 @@ TRAITS_DEFN(aabb_distanceSphere, glm::distance, gLuaAABB<>, gLuaSphere<>)
 TRAITS_DEFN(aabb_contains, glm::contains, gLuaAABB<>, gLuaVec3<>)
 TRAITS_DEFN(aabb_containsAABB, glm::contains, gLuaAABB<>, gLuaAABB<>)
 TRAITS_DEFN(aabb_containsSegment, glm::contains, gLuaAABB<>, gLuaSegment<>)
+TRAITS_DEFN(aabb_containsTriangle, glm::contains, gLuaAABB<>, gLuaTriangle<>)
 TRAITS_DEFN(aabb_containsSphere, glm::contains, gLuaAABB<>, gLuaSphere<>)
 TRAITS_DEFN(aabb_containsPolygon, glm::contains, gLuaAABB<>, gLuaPolygon<>)
 TRAITS_DEFN(aabb_grow, glm::grow, gLuaAABB<>, gLuaFloat)
 TRAITS_DEFN(aabb_enclose, glm::enclose, gLuaAABB<>, gLuaVec3<>)
 TRAITS_DEFN(aabb_encloseSegment, glm::enclose, gLuaAABB<>, gLuaSegment<>)
+TRAITS_DEFN(aabb_encloseTriangle, glm::enclose, gLuaAABB<>, gLuaTriangle<>)
 TRAITS_DEFN(aabb_encloseSphere, glm::enclose, gLuaAABB<>, gLuaSphere<>)
 TRAITS_DEFN(aabb_encloseAABB, glm::enclose, gLuaAABB<>, gLuaAABB<>)
 TRAITS_DEFN(aabb_enclosePolygon, glm::enclose, gLuaAABB<>, gLuaPolygon<>)
-TRAITS_DEFN(aabb_intersectAABB, glm::intersects, gLuaAABB<>, gLuaAABB<>)
-TRAITS_DEFN(aabb_intersectSphere, glm::intersects, gLuaAABB<>, gLuaSphere<>)
-TRAITS_DEFN(aabb_intersectPlane, glm::intersects, gLuaAABB<>, gLuaPlane<>)
-TRAITS_LAYOUT_DEFN(aabb_intersectLine, glm::intersects, GEOM_INTERSECTS_RH, gLuaAABB<>, gLuaLine<>)
-TRAITS_LAYOUT_DEFN(aabb_intersectSegment, glm::intersects, GEOM_INTERSECTS_RH, gLuaAABB<>, gLuaSegment<>)
-TRAITS_LAYOUT_DEFN(aabb_intersectRay, glm::intersects, GEOM_INTERSECTS_RH, gLuaAABB<>, gLuaRay<>)
+TRAITS_DEFN(aabb_intersectsAABB, glm::intersects, gLuaAABB<>, gLuaAABB<>)
+TRAITS_DEFN(aabb_intersectsSphere, glm::intersects, gLuaAABB<>, gLuaSphere<>)
+TRAITS_DEFN(aabb_intersectsPlane, glm::intersects, gLuaAABB<>, gLuaPlane<>)
+//TRAITS_DEFN(aabb_intersectsTriangle, glm::intersects, gLuaAABB<>, gLuaTriangle<>)
+TRAITS_LAYOUT_DEFN(aabb_intersectsLine, glm::intersects, GEOM_INTERSECTS_RH, gLuaAABB<>, gLuaLine<>)
+TRAITS_LAYOUT_DEFN(aabb_intersectsSegment, glm::intersects, GEOM_INTERSECTS_RH, gLuaAABB<>, gLuaSegment<>)
+TRAITS_LAYOUT_DEFN(aabb_intersectsRay, glm::intersects, GEOM_INTERSECTS_RH, gLuaAABB<>, gLuaRay<>)
 TRAITS_DEFN(aabb_intersection, glm::intersection, gLuaAABB<>, gLuaAABB<>)
 TRAITS_DEFN(aabb_slabs, glm::slabs, gLuaAABB<>, gLuaRay<>)
 TRAITS_LAYOUT_DEFN(aabb_projectToAxis, glm::projectToAxis, GEOM_PROJECTION, gLuaAABB<>, gLuaVec3<>)
@@ -310,23 +349,33 @@ static const luaL_Reg luaglm_aabblib[] = {
   { "contains", glm_aabb_contains },
   { "containsAABB", glm_aabb_containsAABB },
   { "containsSegment", glm_aabb_containsSegment },
+  { "containsTriangle", glm_aabb_containsTriangle },
   { "containsSphere", glm_aabb_containsSphere },
   { "containsPolygon", glm_aabb_containsPolygon },
   { "grow", glm_aabb_grow },
   { "enclose", glm_aabb_enclose },
   { "encloseSegment", glm_aabb_encloseSegment },
+  { "encloseTriangle", glm_aabb_encloseTriangle },
   { "encloseSphere", glm_aabb_encloseSphere },
   { "encloseAABB", glm_aabb_encloseAABB },
   { "enclosePolygon", glm_aabb_enclosePolygon },
-  { "intersectAABB", glm_aabb_intersectAABB },
-  { "intersectSphere", glm_aabb_intersectSphere },
-  { "intersectPlane", glm_aabb_intersectPlane },
-  { "intersectLine", glm_aabb_intersectLine },
-  { "intersectSegment", glm_aabb_intersectSegment },
-  { "intersectRay", glm_aabb_intersectRay },
+  { "intersectsAABB", glm_aabb_intersectsAABB },
+  { "intersectsSphere", glm_aabb_intersectsSphere },
+  { "intersectsPlane", glm_aabb_intersectsPlane },
+  //{ "intersectsTriangle", glm_aabb_intersectsTriangle },
+  { "intersectsLine", glm_aabb_intersectsLine },
+  { "intersectsSegment", glm_aabb_intersectsSegment },
+  { "intersectsRay", glm_aabb_intersectsRay },
   { "intersection", glm_aabb_intersection },
   { "slabs", glm_aabb_slabs },
   { "projectToAxis", glm_aabb_projectToAxis },
+  /* @DEPRECATED intersectsObject */
+  { "intersectAABB", glm_aabb_intersectsAABB },
+  { "intersectSphere", glm_aabb_intersectsSphere },
+  { "intersectPlane", glm_aabb_intersectsPlane },
+  { "intersectLine", glm_aabb_intersectsLine },
+  { "intersectSegment", glm_aabb_intersectsSegment },
+  { "intersectRay", glm_aabb_intersectsRay },
   { GLM_NULLPTR, GLM_NULLPTR }
 };
 
@@ -390,11 +439,11 @@ TRAITS_DEFN(aabb2d_enclose, glm::enclose, gLuaAABB<2>, gLuaVec2<>)
 TRAITS_DEFN(aabb2d_encloseSegment, glm::enclose, gLuaAABB<2>, gLuaSegment<2>)
 TRAITS_DEFN(aabb2d_encloseSphere, glm::enclose, gLuaAABB<2>, gLuaSphere<2>)
 TRAITS_DEFN(aabb2d_encloseAABB, glm::enclose, gLuaAABB<2>, gLuaAABB<2>)
-TRAITS_DEFN(aabb2d_intersectAABB, glm::intersects, gLuaAABB<2>, gLuaAABB<2>)
 TRAITS_DEFN(aabb2d_intersection, glm::intersection, gLuaAABB<2>, gLuaAABB<2>)
-TRAITS_LAYOUT_DEFN(aabb2d_intersectLine, glm::intersects, GEOM_INTERSECTS_RH, gLuaAABB<2>, gLuaLine<2>)
-TRAITS_LAYOUT_DEFN(aabb2d_intersectSegment, glm::intersects, GEOM_INTERSECTS_RH, gLuaAABB<2>, gLuaSegment<2>)
-TRAITS_LAYOUT_DEFN(aabb2d_intersectRay, glm::intersects, GEOM_INTERSECTS_RH, gLuaAABB<2>, gLuaRay<2>)
+TRAITS_DEFN(aabb2d_intersectsAABB, glm::intersects, gLuaAABB<2>, gLuaAABB<2>)
+TRAITS_LAYOUT_DEFN(aabb2d_intersectsLine, glm::intersects, GEOM_INTERSECTS_RH, gLuaAABB<2>, gLuaLine<2>)
+TRAITS_LAYOUT_DEFN(aabb2d_intersectsSegment, glm::intersects, GEOM_INTERSECTS_RH, gLuaAABB<2>, gLuaSegment<2>)
+TRAITS_LAYOUT_DEFN(aabb2d_intersectsRay, glm::intersects, GEOM_INTERSECTS_RH, gLuaAABB<2>, gLuaRay<2>)
 TRAITS_LAYOUT_DEFN(aabb2d_projectToAxis, glm::projectToAxis, GEOM_PROJECTION, gLuaAABB<2>, gLuaVec2<>)
 
 static const luaL_Reg luaglm_aabb2dlib[] = {
@@ -436,12 +485,17 @@ static const luaL_Reg luaglm_aabb2dlib[] = {
   { "encloseSegment", glm_aabb2d_encloseSegment },
   { "encloseSphere", glm_aabb2d_encloseSphere },
   { "encloseAABB", glm_aabb2d_encloseAABB },
-  { "intersectAABB", glm_aabb2d_intersectAABB },
-  { "intersectLine", glm_aabb2d_intersectLine },
-  { "intersectSegment", glm_aabb2d_intersectSegment },
-  { "intersectRay", glm_aabb2d_intersectRay },
+  { "intersectsAABB", glm_aabb2d_intersectsAABB },
+  { "intersectsLine", glm_aabb2d_intersectsLine },
+  { "intersectsSegment", glm_aabb2d_intersectsSegment },
+  { "intersectsRay", glm_aabb2d_intersectsRay },
   { "intersection", glm_aabb2d_intersection },
   { "projectToAxis", glm_aabb2d_projectToAxis },
+  /* @DEPRECATED intersectsObject */
+  { "intersectAABB", glm_aabb2d_intersectsAABB },
+  { "intersectLine", glm_aabb2d_intersectsLine },
+  { "intersectSegment", glm_aabb2d_intersectsSegment },
+  { "intersectRay", glm_aabb2d_intersectsRay },
   { GLM_NULLPTR, GLM_NULLPTR }
 };
 
@@ -469,6 +523,7 @@ TRAITS_LAYOUT_DEFN(line_closest, glm::closestPoint, GEOM_DISTANCE, gLuaLine<>, g
 TRAITS_LAYOUT_DEFN(line_closestRay, glm::closestPoint, GEOM_INTERSECTS, gLuaLine<>, gLuaRay<>)
 TRAITS_LAYOUT_DEFN(line_closestLine, glm::closestPoint, GEOM_INTERSECTS, gLuaLine<>, gLuaLine<>)
 TRAITS_LAYOUT_DEFN(line_closestSegment, glm::closestPoint, GEOM_INTERSECTS, gLuaLine<>, gLuaSegment<>)
+TRAITS_LAYOUT_DEFN(line_closestTriangle, glm::closestPoint, GEOM_INTERSECTS_UV, gLuaLine<>, gLuaTriangle<>)
 TRAITS_DEFN(line_contains, glm::contains, gLuaLine<>, gLuaVec3<>, gLuaEps<>)
 TRAITS_DEFN(line_containsRay, glm::contains, gLuaLine<>, gLuaRay<>, gLuaEps<>)
 TRAITS_DEFN(line_containsSegment, glm::contains, gLuaLine<>, gLuaSegment<>, gLuaEps<>)
@@ -477,9 +532,10 @@ TRAITS_LAYOUT_DEFN(line_distanceRay, glm::distance, GEOM_INTERSECTS, gLuaLine<>,
 TRAITS_LAYOUT_DEFN(line_distanceLine, glm::distance, GEOM_INTERSECTS, gLuaLine<>, gLuaLine<>)
 TRAITS_LAYOUT_DEFN(line_distanceSegment, glm::distance, GEOM_INTERSECTS, gLuaLine<>, gLuaSegment<>)
 TRAITS_DEFN(line_distanceSphere, glm::distance, gLuaLine<>, gLuaSphere<>)
-TRAITS_LAYOUT_DEFN(line_intersectAABB, glm::intersects, GEOM_INTERSECTS, gLuaLine<>, gLuaAABB<>)
-TRAITS_LAYOUT_DEFN(line_intersectSphere, glm::intersects, GEOM_INTERSECTS, gLuaLine<>, gLuaSphere<>)
-TRAITS_LAYOUT_DEFN(line_intersectPlane, glm::intersects, GEOM_DISTANCE, gLuaLine<>, gLuaPlane<>)
+TRAITS_LAYOUT_DEFN(line_intersectsAABB, glm::intersects, GEOM_INTERSECTS, gLuaLine<>, gLuaAABB<>)
+TRAITS_LAYOUT_DEFN(line_intersectsSphere, glm::intersects, GEOM_INTERSECTS, gLuaLine<>, gLuaSphere<>)
+TRAITS_LAYOUT_DEFN(line_intersectsPlane, glm::intersects, GEOM_DISTANCE, gLuaLine<>, gLuaPlane<>)
+TRAITS_LAYOUT_DEFN(line_intersectsTriangle, glm::intersects, GEOM_INTERSECTS_UV, gLuaLine<>, gLuaTriangle<>)
 TRAITS_LAYOUT_DEFN(line_projectToAxis, glm::projectToAxis, GEOM_PROJECTION, gLuaLine<>, gLuaVec3<>)
 
 static const luaL_Reg luaglm_linelib[] = {
@@ -499,6 +555,7 @@ static const luaL_Reg luaglm_linelib[] = {
   { "closestRay", glm_line_closestRay },
   { "closestLine", glm_line_closestLine },
   { "closestSegment", glm_line_closestSegment },
+  { "closestTriangle", glm_line_closestTriangle },
   { "contains", glm_line_contains },
   { "containsRay", glm_line_containsRay },
   { "containsSegment", glm_line_containsSegment },
@@ -507,10 +564,15 @@ static const luaL_Reg luaglm_linelib[] = {
   { "distanceLine", glm_line_distanceLine },
   { "distanceSegment", glm_line_distanceSegment },
   { "distanceSphere", glm_line_distanceSphere },
-  { "intersectAABB", glm_line_intersectAABB },
-  { "intersectSphere", glm_line_intersectSphere },
-  { "intersectPlane", glm_line_intersectPlane },
+  { "intersectsAABB", glm_line_intersectsAABB },
+  { "intersectsSphere", glm_line_intersectsSphere },
+  { "intersectsPlane", glm_line_intersectsPlane },
+  { "intersectsTriangle", glm_line_intersectsTriangle },
   { "projectToAxis", glm_line_projectToAxis },
+  /* @DEPRECATED intersectsObject */
+  { "intersectAABB", glm_line_intersectsAABB },
+  { "intersectSphere", glm_line_intersectsSphere },
+  { "intersectPlane", glm_line_intersectsPlane },
   { GLM_NULLPTR, GLM_NULLPTR }
 };
 
@@ -544,9 +606,10 @@ TRAITS_LAYOUT_DEFN(ray_distanceRay, glm::distance, GEOM_INTERSECTS, gLuaRay<>, g
 TRAITS_LAYOUT_DEFN(ray_distanceLine, glm::distance, GEOM_INTERSECTS, gLuaRay<>, gLuaLine<>)
 TRAITS_LAYOUT_DEFN(ray_distanceSegment, glm::distance, GEOM_INTERSECTS, gLuaRay<>, gLuaSegment<>)
 TRAITS_DEFN(ray_distanceSphere, glm::distance, gLuaRay<>, gLuaSphere<>)
-TRAITS_LAYOUT_DEFN(ray_intersectSphere, glm::intersects, GEOM_INTERSECTS, gLuaRay<>, gLuaSphere<>)
-TRAITS_LAYOUT_DEFN(ray_intersectAABB, glm::intersects, GEOM_INTERSECTS, gLuaRay<>, gLuaAABB<>)
-TRAITS_LAYOUT_DEFN(ray_intersectPlane, glm::intersects, GEOM_DISTANCE, gLuaRay<>, gLuaPlane<>)
+TRAITS_LAYOUT_DEFN(ray_intersectsSphere, glm::intersects, GEOM_INTERSECTS, gLuaRay<>, gLuaSphere<>)
+TRAITS_LAYOUT_DEFN(ray_intersectsAABB, glm::intersects, GEOM_INTERSECTS, gLuaRay<>, gLuaAABB<>)
+TRAITS_LAYOUT_DEFN(ray_intersectsPlane, glm::intersects, GEOM_DISTANCE, gLuaRay<>, gLuaPlane<>)
+TRAITS_LAYOUT_DEFN(ray_intersectsTriangle, glm::intersects, GEOM_INTERSECTS_UV, gLuaRay<>, gLuaTriangle<>)
 TRAITS_LAYOUT_DEFN(ray_projectToAxis, glm::projectToAxis, GEOM_PROJECTION, gLuaRay<>, gLuaVec3<>)
 
 static const luaL_Reg luaglm_raylib[] = {
@@ -572,10 +635,15 @@ static const luaL_Reg luaglm_raylib[] = {
   { "distanceLine", glm_ray_distanceLine },
   { "distanceSegment", glm_ray_distanceSegment },
   { "distanceSphere", glm_ray_distanceSphere },
-  { "intersectSphere", glm_ray_intersectSphere },
-  { "intersectAABB", glm_ray_intersectAABB },
-  { "intersectPlane", glm_ray_intersectPlane },
+  { "intersectsSphere", glm_ray_intersectsSphere },
+  { "intersectsAABB", glm_ray_intersectsAABB },
+  { "intersectsTriangle", glm_ray_intersectsTriangle },
+  { "intersectPlane", glm_ray_intersectsPlane },
   { "projectToAxis", glm_ray_projectToAxis },
+  /* @DEPRECATED intersectsObject */
+  { "intersectSphere", glm_ray_intersectsSphere },
+  { "intersectAABB", glm_ray_intersectsAABB },
+  { "intersectPlane", glm_ray_intersectsPlane },
   { GLM_NULLPTR, GLM_NULLPTR }
 };
 
@@ -606,6 +674,7 @@ TRAITS_LAYOUT_DEFN(segment_closestPoint, glm::closestPoint, GEOM_DISTANCE, gLuaS
 TRAITS_LAYOUT_DEFN(segment_closestRay, glm::closestPoint, GEOM_INTERSECTS, gLuaSegment<>, gLuaRay<>)
 TRAITS_LAYOUT_DEFN(segment_closestLine, glm::closestPoint, GEOM_INTERSECTS, gLuaSegment<>, gLuaLine<>)
 TRAITS_LAYOUT_DEFN(segment_closestSegment, glm::closestPoint, GEOM_INTERSECTS, gLuaSegment<>, gLuaSegment<>)
+TRAITS_LAYOUT_DEFN(segment_closestTriangle, glm::closestPoint, GEOM_INTERSECTS_UV, gLuaSegment<>, gLuaTriangle<>)
 TRAITS_DEFN(segment_containsPoint, glm::contains, gLuaSegment<>, gLuaVec3<>, gLuaEps<>)
 TRAITS_DEFN(segment_containsSegment, glm::contains, gLuaSegment<>, gLuaSegment<>, gLuaEps<>)
 TRAITS_LAYOUT_DEFN(segment_distance2, glm::distance2, GEOM_DISTANCE, gLuaSegment<>, gLuaVec3<>)
@@ -619,6 +688,7 @@ TRAITS_LAYOUT_DEFN(segment_intersectsSphere, glm::intersects, GEOM_INTERSECTS, g
 TRAITS_LAYOUT_DEFN(segment_intersectsAABB, glm::intersects, GEOM_INTERSECTS, gLuaSegment<>, gLuaAABB<>)
 TRAITS_DEFN(segment_intersectsPlane, glm::intersects, gLuaSegment<>, gLuaPlane<>)
 TRAITS_LAYOUT_DEFN(segment_intersectsSegment, glm::intersects, GEOM_INTERSECTS, gLuaSegment<>, gLuaSegment<>)
+TRAITS_LAYOUT_DEFN(segment_intersectsTriangle, glm::intersects, GEOM_INTERSECTS_UV, gLuaSegment<>, gLuaTriangle<>)
 
 static const luaL_Reg luaglm_segmentlib[] = {
   { "operator_negate", glm_segment_operator_negate },
@@ -643,6 +713,7 @@ static const luaL_Reg luaglm_segmentlib[] = {
   { "closestSegment", glm_segment_closestSegment },
   { "containsPoint", glm_segment_containsPoint },
   { "containsSegment", glm_segment_containsSegment },
+  { "closestTriangle", glm_segment_closestTriangle },
   { "distance2", glm_segment_distance2 },
   { "distanceSegment2", glm_segment_distanceSegment2 },
   { "distance", glm_segment_distance },
@@ -654,6 +725,7 @@ static const luaL_Reg luaglm_segmentlib[] = {
   { "intersectsAABB", glm_segment_intersectsAABB },
   { "intersectsPlane", glm_segment_intersectsPlane },
   { "intersectsSegment", glm_segment_intersectsSegment },
+  { "intersectsTriangle", glm_segment_intersectsTriangle },
   { GLM_NULLPTR, GLM_NULLPTR }
 };
 
@@ -729,6 +801,105 @@ static const luaL_Reg luaglm_segment2dlib[] = {
   { GLM_NULLPTR, GLM_NULLPTR }
 };
 
+/*
+** {==================================================================
+** Triangle
+** ===================================================================
+*/
+
+TRAITS_DEFN(triangle_operator_negate, operator-, gLuaTriangle<>)
+TRAITS_DEFN(triangle_operator_equals, operator==, gLuaTriangle<>, gLuaTriangle<>)
+TRAITS_DEFN(triangle_operator_add, operator+, gLuaTriangle<>, gLuaVec3<>)
+TRAITS_DEFN(triangle_operator_sub, operator-, gLuaTriangle<>, gLuaVec3<>)
+ROTATION_MATRIX_DEFN(triangle_operator_mul, operator*, LAYOUT_UNARY, gLuaTriangle<>)
+TRAITS_LAYOUT_DEFN(triangle_equal, glm::equal, GEOM_EQUALS, gLuaTriangle<>)
+TRAITS_LAYOUT_DEFN(triangle_notEqual, glm::notEqual, GEOM_EQUALS, gLuaTriangle<>)
+TRAITS_DEFN(triangle_isinf, glm::isinf, gLuaTriangle<>)
+TRAITS_DEFN(triangle_isnan, glm::isnan, gLuaTriangle<>)
+TRAITS_DEFN(triangle_isfinite, glm::isfinite, gLuaTriangle<>)
+TRAITS_DEFN(triangle_isDegenerate, glm::isDegenerate, gLuaTriangle<>)
+TRAITS_DEFN(triangle_centroid, glm::centroid, gLuaTriangle<>)
+TRAITS_DEFN(triangle_area, glm::area, gLuaTriangle<>)
+TRAITS_DEFN(triangle_signedArea, glm::signedArea, gLuaTriangle<>, gLuaVec3<>)
+TRAITS_DEFN(triangle_perimeter, glm::perimeter, gLuaTriangle<>)
+TRAITS_DEFN(triangle_edge, glm::edge, gLuaTriangle<>, gLuaTrait<int>)
+TRAITS_DEFN(triangle_cornerPoint, glm::cornerPoint, gLuaTriangle<>, gLuaTrait<int>)
+TRAITS_DEFN(triangle_barycentric_uvw, glm::barycentricUVW, gLuaTriangle<>, gLuaVec3<>)
+TRAITS_DEFN(triangle_barycentric_uv, glm::barycentricUV, gLuaTriangle<>, gLuaVec3<>)
+TRAITS_DEFN(triangle_barycentric_inside, glm::barycentricInsideTriangle, gLuaFloat, gLuaFloat, gLuaFloat)
+TRAITS_DEFN(triangle_barycentric_pointuv, glm::barycentricPoint, gLuaTriangle<>, gLuaFloat, gLuaFloat)
+TRAITS_DEFN(triangle_barycentric_pointuvw, glm::barycentricPoint, gLuaTriangle<>, gLuaFloat, gLuaFloat, gLuaFloat)
+TRAITS_DEFN(triangle_planeCCW, glm::planeCCW, gLuaTriangle<>)
+TRAITS_DEFN(triangle_unnormalizedNormalCCW, glm::unnormalizedNormalCCW, gLuaTriangle<>)
+TRAITS_DEFN(triangle_normalCCW, glm::normalCCW, gLuaTriangle<>)
+TRAITS_DEFN(triangle_planeCW, glm::planeCW, gLuaTriangle<>)
+TRAITS_DEFN(triangle_unnormalizedNormalCW, glm::unnormalizedNormalCW, gLuaTriangle<>)
+TRAITS_DEFN(triangle_normalCW, glm::normalCW, gLuaTriangle<>)
+TRAITS_DEFN(triangle_extremePoint, glm::extremePoint, gLuaTriangle<>, gLuaVec3<>)
+TRAITS_DEFN(triangle_boundingAABB, glm::boundingAABB, gLuaTriangle<>)
+TRAITS_DEFN(triangle_contains, glm::contains, gLuaTriangle<>, gLuaVec3<>, gLuaEps<>)
+TRAITS_DEFN(triangle_containsSegment, glm::contains, gLuaTriangle<>, gLuaSegment<>, gLuaEps<>)
+TRAITS_DEFN(triangle_containsTriangle, glm::contains, gLuaTriangle<>, gLuaTriangle<>, gLuaEps<>)
+TRAITS_DEFN(triangle_closestPoint, glm::closestPoint, gLuaTriangle<>, gLuaVec3<>)
+TRAITS_LAYOUT_DEFN(triangle_closestSegment, glm::closestPoint, GEOM_INTERSECTS_PT, gLuaTriangle<>, gLuaSegment<>)
+TRAITS_LAYOUT_DEFN(triangle_closestLine, glm::closestPoint, GEOM_INTERSECTS_PT, gLuaTriangle<>, gLuaLine<>)
+TRAITS_DEFN(triangle_distance, glm::distance, gLuaTriangle<>, gLuaVec3<>)
+TRAITS_DEFN(triangle_distanceSphere, glm::distance, gLuaTriangle<>, gLuaSphere<>)
+//TRAITS_DEFN(triangle_intersectsAABB, glm::intersects, gLuaTriangle<>, gLuaAABB<>)
+TRAITS_LAYOUT_DEFN(triangle_intersectsRay, glm::intersects, GEOM_INTERSECTS_UV, gLuaTriangle<>, gLuaRay<>)
+TRAITS_LAYOUT_DEFN(triangle_intersectsLine, glm::intersects, GEOM_INTERSECTS_UV, gLuaTriangle<>, gLuaLine<>)
+TRAITS_LAYOUT_DEFN(triangle_intersectsSegment, glm::intersects, GEOM_INTERSECTS_UV, gLuaTriangle<>, gLuaSegment<>)
+TRAITS_DEFN(triangle_intersectsPlane, glm::intersects, gLuaTriangle<>, gLuaPlane<>)
+TRAITS_LAYOUT_DEFN(triangle_intersectsSphere, glm::intersects, GEOM_INTERSECTS_PT, gLuaTriangle<>, gLuaSphere<>)
+
+static const luaL_Reg luaglm_trianglelib[] = {
+  { "operator_negate", glm_triangle_operator_negate },
+  { "operator_equals", glm_triangle_operator_equals },
+  { "operator_add", glm_triangle_operator_add },
+  { "operator_sub", glm_triangle_operator_sub },
+  { "operator_mul", glm_triangle_operator_mul },
+  { "equal", glm_triangle_equal },
+  { "notEqual", glm_triangle_notEqual },
+  { "isinf", glm_triangle_isinf },
+  { "isnan", glm_triangle_isnan },
+  { "isfinite", glm_triangle_isfinite },
+  { "isDegenerate", glm_triangle_isDegenerate },
+  { "centroid", glm_triangle_centroid },
+  { "area", glm_triangle_area },
+  { "signedArea", glm_triangle_signedArea },
+  { "perimeter", glm_triangle_perimeter },
+  { "edge", glm_triangle_edge },
+  { "cornerPoint", glm_triangle_cornerPoint },
+  { "extremePoint", glm_triangle_extremePoint },
+  { "boundingAABB", glm_triangle_boundingAABB },
+  { "uvw", glm_triangle_barycentric_uvw },
+  { "uv", glm_triangle_barycentric_uv },
+  { "pointuv", glm_triangle_barycentric_pointuv },
+  { "pointuvw", glm_triangle_barycentric_pointuvw },
+  { "inside_triangle", glm_triangle_barycentric_inside },
+  { "planeCCW", glm_triangle_planeCCW },
+  { "planeCW", glm_triangle_planeCW },
+  { "unnormalizedNormalCCW", glm_triangle_unnormalizedNormalCCW },
+  { "unnormalizedNormalCW", glm_triangle_unnormalizedNormalCW },
+  { "normalCCW", glm_triangle_normalCCW },
+  { "normalCW", glm_triangle_normalCW },
+  { "closestPoint", glm_triangle_closestPoint },
+  { "closestSegment", glm_triangle_closestSegment },
+  { "closestLine", glm_triangle_closestLine },
+  { "contains", glm_triangle_contains },
+  { "containsSegment", glm_triangle_containsSegment },
+  { "containsTriangle", glm_triangle_containsTriangle },
+  { "distance", glm_triangle_distance },
+  { "distanceSphere", glm_triangle_distanceSphere },
+  //{ "intersectsAABB", glm_triangle_intersectsAABB },
+  { "intersectsRay", glm_triangle_intersectsRay },
+  { "intersectsLine", glm_triangle_intersectsLine },
+  { "intersectsSegment", glm_triangle_intersectsSegment },
+  { "intersectsSphere", glm_triangle_intersectsSphere },
+  { "intersectsPlane", glm_triangle_intersectsPlane },
+  { GLM_NULLPTR, GLM_NULLPTR }
+};
+
 /* }================================================================== */
 
 /*
@@ -788,6 +959,7 @@ TRAITS_DEFN(sphere_extremePoint, glm::extremePoint, gLuaSphere<>, gLuaVec3<>)
 TRAITS_DEFN(sphere_contains, glm::contains, gLuaSphere<>, gLuaVec3<>, gLuaEps<>)
 TRAITS_DEFN(sphere_containsSegment, glm::contains, gLuaSphere<>, gLuaSegment<>)
 TRAITS_DEFN(sphere_containsSphere, glm::contains, gLuaSphere<>, gLuaSphere<>, gLuaEps<>)
+TRAITS_DEFN(sphere_containsTriangle, glm::contains, gLuaSphere<>, gLuaTriangle<>, gLuaEps<>)
 TRAITS_DEFN(sphere_containsAABB, glm::contains, gLuaSphere<>, gLuaAABB<>)
 TRAITS_DEFN(sphere_distance, glm::distance, gLuaSphere<>, gLuaVec3<>)
 TRAITS_DEFN(sphere_distanceSphere, glm::distance, gLuaSphere<>, gLuaSphere<>)
@@ -795,17 +967,20 @@ TRAITS_DEFN(sphere_distanceAABB, glm::distance, gLuaSphere<>, gLuaAABB<>)
 TRAITS_DEFN(sphere_distanceRay, glm::distance, gLuaSphere<>, gLuaRay<>)
 TRAITS_DEFN(sphere_distanceSegment, glm::distance, gLuaSphere<>, gLuaSegment<>)
 TRAITS_DEFN(sphere_distanceLine, glm::distance, gLuaSphere<>, gLuaLine<>)
+TRAITS_DEFN(sphere_distanceTriangle, glm::distance, gLuaSphere<>, gLuaTriangle<>)
 TRAITS_DEFN(sphere_closestPoint, glm::closestPoint, gLuaSphere<>, gLuaVec3<>)
-TRAITS_DEFN(sphere_intersectSphere, glm::intersects, gLuaSphere<>, gLuaSphere<>)
-TRAITS_DEFN(sphere_intersectAABB, glm::intersects, gLuaSphere<>, gLuaAABB<>)
-TRAITS_DEFN(sphere_intersectPlane, glm::intersects, gLuaSphere<>, gLuaPlane<>)
-TRAITS_LAYOUT_DEFN(sphere_intersectLine, glm::intersects, GEOM_INTERSECTS_RH, gLuaSphere<>, gLuaLine<>)
-TRAITS_LAYOUT_DEFN(sphere_intersectSegment, glm::intersects, GEOM_INTERSECTS_RH, gLuaSphere<>, gLuaSegment<>)
-TRAITS_LAYOUT_DEFN(sphere_intersectRay, glm::intersects, GEOM_INTERSECTS_RH, gLuaSphere<>, gLuaRay<>)
+TRAITS_DEFN(sphere_intersectsSphere, glm::intersects, gLuaSphere<>, gLuaSphere<>)
+TRAITS_DEFN(sphere_intersectsAABB, glm::intersects, gLuaSphere<>, gLuaAABB<>)
+TRAITS_DEFN(sphere_intersectsPlane, glm::intersects, gLuaSphere<>, gLuaPlane<>)
+TRAITS_DEFN(sphere_intersectsTriangle, glm::intersects, gLuaSphere<>, gLuaTriangle<>)
+TRAITS_LAYOUT_DEFN(sphere_intersectsLine, glm::intersects, GEOM_INTERSECTS_RH, gLuaSphere<>, gLuaLine<>)
+TRAITS_LAYOUT_DEFN(sphere_intersectsSegment, glm::intersects, GEOM_INTERSECTS_RH, gLuaSphere<>, gLuaSegment<>)
+TRAITS_LAYOUT_DEFN(sphere_intersectsRay, glm::intersects, GEOM_INTERSECTS_RH, gLuaSphere<>, gLuaRay<>)
 TRAITS_DEFN(sphere_enclose, glm::enclose, gLuaSphere<>, gLuaVec3<>)
 TRAITS_DEFN(sphere_encloseSegment, glm::enclose, gLuaSphere<>, gLuaSegment<>)
 TRAITS_DEFN(sphere_encloseSphere, glm::enclose, gLuaSphere<>, gLuaSphere<>)
 TRAITS_DEFN(sphere_encloseAABB, glm::enclose, gLuaSphere<>, gLuaAABB<>)
+TRAITS_DEFN(sphere_encloseTriangle, glm::enclose, gLuaSphere<>, gLuaTriangle<>)
 TRAITS_DEFN(sphere_extendRadiusToContain, glm::extendRadiusToContain, gLuaSphere<>, gLuaVec3<>, gLuaEps<>)
 TRAITS_DEFN(sphere_extendRadiusToContainSphere, glm::extendRadiusToContain, gLuaSphere<>, gLuaSphere<>, gLuaEps<>)
 TRAITS_DEFN(sphere_maximalContainedAABB, glm::maximalContainedAABB, gLuaSphere<>)
@@ -829,6 +1004,7 @@ static const luaL_Reg luaglm_spherelib[] = {
   { "contains", glm_sphere_contains },
   { "containsSegment", glm_sphere_containsSegment },
   { "containsSphere", glm_sphere_containsSphere },
+  { "containsTriangle", glm_sphere_containsTriangle },
   { "containsAABB", glm_sphere_containsAABB },
   { "distance", glm_sphere_distance },
   { "distanceSphere", glm_sphere_distanceSphere },
@@ -836,23 +1012,33 @@ static const luaL_Reg luaglm_spherelib[] = {
   { "distanceRay", glm_sphere_distanceRay },
   { "distanceSegment", glm_sphere_distanceSegment },
   { "distanceLine", glm_sphere_distanceLine },
+  { "distanceTriangle", glm_sphere_distanceTriangle },
   { "closestPoint", glm_sphere_closestPoint },
-  { "intersectSphere", glm_sphere_intersectSphere },
-  { "intersectAABB", glm_sphere_intersectAABB },
-  { "intersectLine", glm_sphere_intersectLine },
-  { "intersectSegment", glm_sphere_intersectSegment },
-  { "intersectRay", glm_sphere_intersectRay },
-  { "intersectPlane", glm_sphere_intersectPlane },
+  { "intersectsSphere", glm_sphere_intersectsSphere },
+  { "intersectsAABB", glm_sphere_intersectsAABB },
+  { "intersectsLine", glm_sphere_intersectsLine },
+  { "intersectsSegment", glm_sphere_intersectsSegment },
+  { "intersectsRay", glm_sphere_intersectsRay },
+  { "intersectsPlane", glm_sphere_intersectsPlane },
+  { "intersectsTriangle", glm_sphere_intersectsTriangle },
   { "enclose", glm_sphere_enclose },
   { "encloseSegment", glm_sphere_encloseSegment },
   { "encloseSphere", glm_sphere_encloseSphere },
   { "encloseAABB", glm_sphere_encloseAABB },
+  { "encloseTriangle", glm_sphere_encloseTriangle },
   { "extendRadiusToContain", glm_sphere_extendRadiusToContain },
   { "extendRadiusToContainSphere", glm_sphere_extendRadiusToContainSphere },
   { "maximalContainedAABB", glm_sphere_maximalContainedAABB },
   { "fitThroughPoints", glm_sphere_fitThroughPoints },
   { "optimalEnclosingSphere", glm_sphere_optimalEnclosingSphere },
   { "projectToAxis", glm_sphere_projectToAxis },
+  /* @DEPRECATED intersectsObject */
+  { "intersectSphere", glm_sphere_intersectsSphere },
+  { "intersectAABB", glm_sphere_intersectsAABB },
+  { "intersectLine", glm_sphere_intersectsLine },
+  { "intersectSegment", glm_sphere_intersectsSegment },
+  { "intersectRay", glm_sphere_intersectsRay },
+  { "intersectPlane", glm_sphere_intersectsPlane },
   { GLM_NULLPTR, GLM_NULLPTR }
 };
 
@@ -887,12 +1073,12 @@ TRAITS_DEFN(circle_distanceRay, glm::distance, gLuaSphere<2>, gLuaRay<2>)
 TRAITS_DEFN(circle_distanceSegment, glm::distance, gLuaSphere<2>, gLuaSegment<2>)
 TRAITS_DEFN(circle_distanceLine, glm::distance, gLuaSphere<2>, gLuaLine<2>)
 TRAITS_DEFN(circle_closestPoint, glm::closestPoint, gLuaSphere<2>, gLuaVec2<>)
-TRAITS_DEFN(circle_intersectCircle, glm::intersects, gLuaSphere<2>, gLuaSphere<2>)
-TRAITS_DEFN(circle_intersectAABB, glm::intersects, gLuaSphere<2>, gLuaAABB<2>)
-TRAITS_DEFN(circle_intersectPlane, glm::intersects, gLuaSphere<2>, gLuaPlane<2>)
-TRAITS_LAYOUT_DEFN(circle_intersectLine, glm::intersects, GEOM_INTERSECTS_RH, gLuaSphere<2>, gLuaLine<2>)
-TRAITS_LAYOUT_DEFN(circle_intersectSegment, glm::intersects, GEOM_INTERSECTS_RH, gLuaSphere<2>, gLuaSegment<2>)
-TRAITS_LAYOUT_DEFN(circle_intersectRay, glm::intersects, GEOM_INTERSECTS_RH, gLuaSphere<2>, gLuaRay<2>)
+TRAITS_DEFN(circle_intersectsCircle, glm::intersects, gLuaSphere<2>, gLuaSphere<2>)
+TRAITS_DEFN(circle_intersectsAABB, glm::intersects, gLuaSphere<2>, gLuaAABB<2>)
+TRAITS_DEFN(circle_intersectsPlane, glm::intersects, gLuaSphere<2>, gLuaPlane<2>)
+TRAITS_LAYOUT_DEFN(circle_intersectsLine, glm::intersects, GEOM_INTERSECTS_RH, gLuaSphere<2>, gLuaLine<2>)
+TRAITS_LAYOUT_DEFN(circle_intersectsSegment, glm::intersects, GEOM_INTERSECTS_RH, gLuaSphere<2>, gLuaSegment<2>)
+TRAITS_LAYOUT_DEFN(circle_intersectsRay, glm::intersects, GEOM_INTERSECTS_RH, gLuaSphere<2>, gLuaRay<2>)
 TRAITS_DEFN(circle_enclose, glm::enclose, gLuaSphere<2>, gLuaVec2<>)
 TRAITS_DEFN(circle_encloseSegment, glm::enclose, gLuaSphere<2>, gLuaSegment<2>)
 TRAITS_DEFN(circle_encloseSphere, glm::enclose, gLuaSphere<2>, gLuaSphere<2>)
@@ -926,12 +1112,12 @@ static const luaL_Reg luaglm_circlelib[] = {
   { "distanceSegment", glm_circle_distanceSegment },
   { "distanceLine", glm_circle_distanceLine },
   { "closestPoint", glm_circle_closestPoint },
-  { "intersectCircle", glm_circle_intersectCircle },
-  { "intersectAABB", glm_circle_intersectAABB },
-  { "intersectLine", glm_circle_intersectLine },
-  { "intersectSegment", glm_circle_intersectSegment },
-  { "intersectRay", glm_circle_intersectRay },
-  { "intersectPlane", glm_circle_intersectPlane },
+  { "intersectsCircle", glm_circle_intersectsCircle },
+  { "intersectsAABB", glm_circle_intersectsAABB },
+  { "intersectsLine", glm_circle_intersectsLine },
+  { "intersectsSegment", glm_circle_intersectsSegment },
+  { "intersectsRay", glm_circle_intersectsRay },
+  { "intersectsPlane", glm_circle_intersectsPlane },
   { "enclose", glm_circle_enclose },
   { "encloseSegment", glm_circle_encloseSegment },
   { "encloseSphere", glm_circle_encloseSphere },
@@ -940,6 +1126,13 @@ static const luaL_Reg luaglm_circlelib[] = {
   { "extendRadiusToContainCircle", glm_circle_extendRadiusToContainCircle },
   { "maximalContainedAABB", glm_circle_maximalContainedAABB },
   { "projectToAxis", glm_circle_projectToAxis },
+  /* @DEPRECATED intersectsObject */
+  { "intersectCircle", glm_circle_intersectsCircle },
+  { "intersectAABB", glm_circle_intersectsAABB },
+  { "intersectLine", glm_circle_intersectsLine },
+  { "intersectSegment", glm_circle_intersectsSegment },
+  { "intersectRay", glm_circle_intersectsRay },
+  { "intersectPlane", glm_circle_intersectsPlane },
   { GLM_NULLPTR, GLM_NULLPTR }
 };
 
@@ -966,6 +1159,7 @@ TRAITS_DEFN(plane_fromPoints, glm::planeFrom, gLuaVec3<>, gLuaVec3<>, gLuaVec3<>
 TRAITS_DEFN(plane_isDegenerate, glm::isDegenerate, gLuaPlane<>)
 TRAITS_DEFN(plane_isParallel, glm::isParallel, gLuaPlane<>, gLuaPlane<>, gLuaEps<>)
 TRAITS_DEFN(plane_areOnSameSide, glm::areOnSameSide, gLuaPlane<>, gLuaVec3<>, gLuaVec3<>)
+TRAITS_DEFN(plane_examineSide, glm::examineSide, gLuaPlane<>, gLuaTriangle<>, gLuaEps<>)
 TRAITS_DEFN(plane_isInPositiveDirection, glm::isInPositiveDirection, gLuaPlane<>, gLuaVec3<>)
 TRAITS_DEFN(plane_isOnPositiveSide, glm::isOnPositiveSide, gLuaPlane<>, gLuaVec3<>)
 TRAITS_DEFN(plane_passesThroughOrigin, glm::passesThroughOrigin, gLuaPlane<>, gLuaEps<>)
@@ -977,6 +1171,7 @@ TRAITS_DEFN(plane_project, glm::project, gLuaPlane<>, gLuaVec3<>)
 TRAITS_DEFN(plane_projectLine, glm::project, gLuaPlane<>, gLuaLine<>)
 TRAITS_DEFN(plane_projectSegment, glm::project, gLuaPlane<>, gLuaSegment<>)
 TRAITS_DEFN(plane_projectRay, glm::project, gLuaPlane<>, gLuaRay<>)
+TRAITS_DEFN(plane_projectTriangle, glm::project, gLuaPlane<>, gLuaTriangle<>)
 TRAITS_DEFN(plane_projectToNegativeHalf, glm::projectToNegativeHalf, gLuaPlane<>, gLuaVec3<>)
 TRAITS_DEFN(plane_projectToPositiveHalf, glm::projectToPositiveHalf, gLuaPlane<>, gLuaVec3<>)
 TRAITS_DEFN(plane_distance, glm::distance, gLuaPlane<>, gLuaVec3<>)
@@ -988,6 +1183,7 @@ TRAITS_DEFN(plane_signedDistanceSegment, glm::signedDistance, gLuaPlane<>, gLuaS
 TRAITS_DEFN(plane_signedDistanceRay, glm::signedDistance, gLuaPlane<>, gLuaRay<>)
 TRAITS_DEFN(plane_signedDistanceAABB, glm::signedDistance, gLuaPlane<>, gLuaAABB<>)
 TRAITS_DEFN(plane_signedDistanceSphere, glm::signedDistance, gLuaPlane<>, gLuaSphere<>)
+TRAITS_DEFN(plane_signedDistanceTriangle, glm::signedDistance, gLuaPlane<>, gLuaTriangle<>)
 TRAITS_DEFN(plane_orthoProjection, glm::orthoProjection, gLuaPlane<>)
 TRAITS_DEFN(plane_mirrorMatrix, glm::mirrorMatrix, gLuaPlane<>)
 TRAITS_DEFN(plane_mirror, glm::mirror, gLuaPlane<>, gLuaVec3<>)
@@ -997,9 +1193,11 @@ TRAITS_DEFN(plane_contains, glm::contains, gLuaPlane<>, gLuaVec3<>, gLuaEps<>)
 TRAITS_DEFN(plane_containsLine, glm::contains, gLuaPlane<>, gLuaLine<>, gLuaEps<>)
 TRAITS_DEFN(plane_containsRay, glm::contains, gLuaPlane<>, gLuaRay<>, gLuaEps<>)
 TRAITS_DEFN(plane_containsSegment, glm::contains, gLuaPlane<>, gLuaSegment<>, gLuaEps<>)
+TRAITS_DEFN(plane_containsTriangle, glm::contains, gLuaPlane<>, gLuaTriangle<>, gLuaEps<>)
 TRAITS_LAYOUT_DEFN(plane_intersectsRay, glm::intersects, GEOM_DISTANCE, gLuaPlane<>, gLuaRay<>)
 TRAITS_LAYOUT_DEFN(plane_intersectsLine, glm::intersects, GEOM_DISTANCE, gLuaPlane<>, gLuaLine<>)
 TRAITS_LAYOUT_DEFN(plane_intersectsSegment, glm::intersects, GEOM_DISTANCE, gLuaPlane<>, gLuaSegment<>)
+TRAITS_DEFN(plane_intersectsTriangle, glm::intersects, gLuaPlane<>, gLuaTriangle<>)
 TRAITS_DEFN(plane_intersectsSphere, glm::intersects, gLuaPlane<>, gLuaSphere<>)
 TRAITS_DEFN(plane_intersectsAABB, glm::intersects, gLuaPlane<>, gLuaAABB<>)
 TRAITS_DEFN(plane_clipSegment, glm::clip, gLuaPlane<>, gLuaSegment<>)
@@ -1035,6 +1233,22 @@ GLM_BINDING_QUALIFIER(plane_intersectsPlane) {
   GLM_BINDING_END
 }
 
+GLM_BINDING_QUALIFIER(plane_clipTriangle) {
+  GLM_BINDING_BEGIN
+  const gLuaPlane<>::type plane = gLuaPlane<>::Next(LB);
+  const gLuaTriangle<>::type line = gLuaTriangle<>::Next(LB);
+  gLuaTriangle<>::type t1 = gLuaTriangle<>::zero();
+  gLuaTriangle<>::type t2 = gLuaTriangle<>::zero();
+  switch (clip(plane, line, t1, t1)) {
+    case 1: TRAITS_PUSH(LB, t1); break;
+    case 2: TRAITS_PUSH(LB, t1, t2); break;
+    default:
+      break;
+  }
+  return gLuaBase::Push(LB);
+  GLM_BINDING_END
+}
+
 static const luaL_Reg luaglm_planelib[] = {
   { "operator_negate", glm_plane_operator_negate },
   { "operator_equals", glm_plane_operator_equals },
@@ -1051,6 +1265,7 @@ static const luaL_Reg luaglm_planelib[] = {
   { "isDegenerate", glm_plane_isDegenerate },
   { "isParallel", glm_plane_isParallel },
   { "areOnSameSide", glm_plane_areOnSameSide },
+  { "examineSide", glm_plane_examineSide },
   { "isInPositiveDirection", glm_plane_isInPositiveDirection },
   { "isOnPositiveSide", glm_plane_isOnPositiveSide },
   { "passesThroughOrigin", glm_plane_passesThroughOrigin },
@@ -1063,6 +1278,7 @@ static const luaL_Reg luaglm_planelib[] = {
   { "projectLine", glm_plane_projectLine },
   { "projectSegment", glm_plane_projectSegment },
   { "projectRay", glm_plane_projectRay },
+  { "projectTriangle", glm_plane_projectTriangle },
   { "projectToNegativeHalf", glm_plane_projectToNegativeHalf },
   { "projectToPositiveHalf", glm_plane_projectToPositiveHalf },
   { "distance", glm_plane_distance },
@@ -1074,6 +1290,7 @@ static const luaL_Reg luaglm_planelib[] = {
   { "signedDistanceRay", glm_plane_signedDistanceRay },
   { "signedDistanceAABB", glm_plane_signedDistanceAABB },
   { "signedDistanceSphere", glm_plane_signedDistanceSphere },
+  { "signedDistanceTriangle", glm_plane_signedDistanceTriangle },
   { "orthoProjection", glm_plane_orthoProjection },
   { "mirrorMatrix", glm_plane_mirrorMatrix },
   { "mirror", glm_plane_mirror },
@@ -1083,14 +1300,18 @@ static const luaL_Reg luaglm_planelib[] = {
   { "containsLine", glm_plane_containsLine },
   { "containsRay", glm_plane_containsRay },
   { "containsSegment", glm_plane_containsSegment },
+  { "containsTriangle", glm_plane_containsTriangle },
   { "intersectsRay", glm_plane_intersectsRay },
   { "intersectsLine", glm_plane_intersectsLine },
   { "intersectsSegment", glm_plane_intersectsSegment },
+  { "intersectsTriangle", glm_plane_intersectsTriangle },
   { "intersectsSphere", glm_plane_intersectsSphere },
   { "intersectsAABB", glm_plane_intersectsAABB },
   { "intersectsPlane", glm_plane_intersectsPlane },
+  { "intersectsTriangle", glm_plane_intersectsTriangle },
   { "clipSegment", glm_plane_clipSegment },
   { "clipLine", glm_plane_clipLine },
+  { "clipTriangle", glm_plane_clipTriangle },
   { GLM_NULLPTR, GLM_NULLPTR },
 };
 
@@ -1136,6 +1357,7 @@ TRAITS_DEFN(polygon_containsAbove, glm::containsAbove, gLuaPolygon<>, gLuaVec3<>
 TRAITS_DEFN(polygon_containsBelow, glm::containsBelow, gLuaPolygon<>, gLuaVec3<>, gLuaEps<>)
 TRAITS_DEFN(polygon_containsPolygon, glm::contains, gLuaPolygon<>, gLuaPolygon<>, gLuaEps<>)
 TRAITS_DEFN(polygon_containsSegment, glm::contains, gLuaPolygon<>, gLuaSegment<>, gLuaEps<>)
+TRAITS_DEFN(polygon_containsTriangle, glm::contains, gLuaPolygon<>, gLuaTriangle<>, gLuaEps<>)
 TRAITS_DEFN(polygon_minimalEnclosingAABB, glm::minimalEnclosingAABB, gLuaPolygon<>)
 TRAITS_DEFN(polygon_intersectsSegment2D, glm::intersects2D, gLuaPolygon<>, gLuaSegment<>)
 TRAITS_DEFN(polygon_intersectsLine, glm::intersects, gLuaPolygon<>, gLuaLine<>)
@@ -1180,17 +1402,17 @@ GLM_BINDING_QUALIFIER(polygon_new) {
   polygon->p = GLM_NULLPTR;
 
   // Setup metatable.
-  if (luaL_getmetatable(LB.L, LUA_GLM_POLYGON_META) == LUA_TTABLE) { // [..., poly, meta]
+  if (luaL_getmetatable(LB.L, LUA_GLM_POLYGON_META) == LUA_TTABLE) {  // [..., poly, meta]
     lua_setmetatable(LB.L, -2);  // [..., poly]
     LuaCrtAllocator<gLuaPolygon<>::Point::type> allocator(LB.L);
 
     // Create a std::vector backed by the Lua allocator.
     using PolyList = glm::List<gLuaPolygon<>::Point::type>;
-    PolyList *list = static_cast<PolyList*>(allocator.realloc(GLM_NULLPTR, 0, sizeof(PolyList)));
+    PolyList *list = static_cast<PolyList *>(allocator.realloc(GLM_NULLPTR, 0, sizeof(PolyList)));
 
     // Populate the polygon with an array of coordinates, if one exists.
     try {
-      polygon->p = ::new(list) PolyList();
+      polygon->p = ::new (list) PolyList();
 
       if (top >= 1 && lua_istable(LB.L, LB.idx)) {
         const auto e = glmLuaArray::end<gLuaVec3<>>(LB.L, LB.idx);
@@ -1377,6 +1599,7 @@ static const luaL_Reg luaglm_polylib[] = {
   { "containsBelow", glm_polygon_containsBelow },
   { "containsPolygon", glm_polygon_containsPolygon },
   { "containsSegment", glm_polygon_containsSegment },
+  { "containsTriangle", glm_polygon_containsTriangle },
   { "minimalEnclosingAABB", glm_polygon_minimalEnclosingAABB },
   { "intersectsSegment2D", glm_polygon_intersectsSegment2D },
   { "intersectsLine", glm_polygon_intersectsLine },

@@ -583,7 +583,7 @@ OPTION(GLM_FORCE_SILENT_WARNINGS "Silent C++ warnings from language extensions" 
 
 # Formerly known as 'GLM_FORCE_QUAT_DATA_WXYZ', however, changed without support
 # for backwards compatibility in-mind; must be compensated for in source.
-OPTION(GLM_FORCE_QUAT_DATA_XYZW "Force GLM to store quat data as x,y,z,w instead of w,x,y,z" ON)
+OPTION(GLM_FORCE_QUAT_DATA_XYZW "Force GLM to store quat data as x,y,z,w instead of w,x,y,z" OFF)
 # GLM_FORCE_PRECISION_{ LOWP_FLOAT, MEDIUMP_FLOAT, HIGHP_FLOAT }
 
 ADD_COMPILE_DEFINITIONS(GLM_ENABLE_EXPERIMENTAL)
@@ -654,7 +654,8 @@ IF( GLM_FORCE_SILENT_WARNINGS )
 ENDIF()
 
 IF( GLM_FORCE_QUAT_DATA_XYZW )
-  ADD_COMPILE_DEFINITIONS(GLM_FORCE_QUAT_DATA_XYZW)
+  MESSAGE(FATAL_ERROR "Disable GLM_FORCE_QUAT_DATA_XYZW" )
+  # ADD_COMPILE_DEFINITIONS(GLM_FORCE_QUAT_DATA_XYZW)
 ENDIF()
 
 IF( LUA_GLM_INCLUDE_EXT )

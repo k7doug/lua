@@ -65,9 +65,9 @@ local glm_mix = glm.mix
 local glm_aabb_contains = glm.aabb.contains
 local glm_aabb_encloseAABB = glm.aabb.encloseAABB
 local glm_aabb_slabs = glm.aabb.slabs
-local glm_aabb_intersectRay = glm.aabb.intersectRay
-local glm_aabb_intersectAABB = glm.aabb.intersectAABB
-local glm_aabb_intersectSphere = glm.aabb.intersectSphere
+local glm_aabb_intersectsRay = glm.aabb.intersectsRay
+local glm_aabb_intersectsAABB = glm.aabb.intersectsAABB
+local glm_aabb_intersectsSphere = glm.aabb.intersectsSphere
 
 -- "Infinity" may not be available in cases where the K-d Tree is serialized;
 -- Replace with some significantly large value.
@@ -742,14 +742,14 @@ function KDTree:GenericQuery(stack, F, arg0, arg1, yield)
     end
 end
 
---[[ KDTree:GenericQuery but implemented with GenericQuery --]]
+--[[ KDTree:Query but implemented with GenericQuery --]]
 function KDTree:Query2(stack, point, yield)
     self:GenericQuery(stack, glm_aabb_contains, point, nil, yield)
 end
 
 --[[ @OVERRIDE --]]
 function KDTree:Raycast(stack, origin, direction, yield)
-    self:GenericQuery(stack, glm_aabb_intersectRay, origin, direction, yield)
+    self:GenericQuery(stack, glm_aabb_intersectsRay, origin, direction, yield)
 end
 
 --[[ KDTree:Raycast but implemented with 'slabs' --]]
@@ -759,12 +759,12 @@ end
 
 --[[ @OVERRIDE --]]
 function KDTree:Colliding(stack, colMin, colMax, yield)
-    self:GenericQuery(stack, glm_aabb_intersectAABB, colMin, colMax, yield)
+    self:GenericQuery(stack, glm_aabb_intersectsAABB, colMin, colMax, yield)
 end
 
 --[[ @OVERRIDE --]]
 function KDTree:SphereIntersection(cache, origin, radius, yield)
-    self:GenericQuery(cache, glm_aabb_intersectSphere, origin, radius, yield)
+    self:GenericQuery(cache, glm_aabb_intersectsSphere, origin, radius, yield)
 end
 
 --[[ @OVERRIDE --]]
@@ -873,6 +873,7 @@ local function ComputeStatistics(self, rootIndex)
     local objCount,nodeCount,leafCount = 0,0,0
     local minLeafCount,maxLeafCount = glm_huge,-glm_huge
     local minDepth,maxDepth = glm_huge,-glm_huge
+
     -- Welfords algorithm for object count distribution
     local k,m,m_last,s,s_last = 0,0.0,0.0,0.0,0.0
 

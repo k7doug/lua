@@ -6,6 +6,7 @@
 
 #include "setup.hpp"
 #include "line.hpp"
+#include "triangle.hpp"
 
 namespace glm {
   /// <summary>
@@ -46,6 +47,16 @@ namespace glm {
       return b - a;
     }
   };
+
+  template<length_t L, typename T, qualifier Q>
+  GLM_GEOM_QUALIFIER Line<L, T, Q> toLine(const LineSegment<L, T, Q> &line) {
+    return Line<L, T, Q>(line.a, line.dir());
+  }
+
+  // template<length_t L, typename T, qualifier Q>
+  // GLM_GEOM_QUALIFIER Ray<L, T, Q> toRay(const LineSegment<L, T, Q> &line) {
+  //   return Ray<L, T, Q>(line.a, line.dir());
+  // }
 
   template<length_t L, typename T, qualifier Q>
   static LineSegment<L, T, Q> operator-(const LineSegment<L, T, Q> &line) {
@@ -270,6 +281,12 @@ namespace glm {
   }
 
   template<length_t L, typename T, qualifier Q>
+  GLM_GEOM_QUALIFIER vec<L, T, Q> closestPoint(const LineSegment<L, T, Q> &line, const Triangle<L, T, Q> &triangle, T &d, T &u, T &v) {
+    closestPointTriangleSegment<L, T, Q, LineSegment<L, T, Q>>(triangle, line, u, v, d);
+    return getPoint(line, d);
+  }
+
+  template<length_t L, typename T, qualifier Q>
   GLM_GEOM_QUALIFIER vec<L, T, Q> closestPoint(const LineSegment<L, T, Q> &line, const vec<L, T, Q> &point) {
     T d(0);
     return closestPoint(line, point, d);
@@ -291,6 +308,12 @@ namespace glm {
   GLM_GEOM_QUALIFIER vec<L, T, Q> closestPoint(const LineSegment<L, T, Q> &line, const LineSegment<L, T, Q> &other) {
     T d(0), d2(0);
     return closestPoint(line, other, d, d2);
+  }
+
+  template<length_t L, typename T, qualifier Q>
+  GLM_GEOM_QUALIFIER vec<3, T, Q> closestPoint(const LineSegment<L, T, Q> &line, const Triangle<L, T, Q> &triangle) {
+    T u, v, d(0);
+    return closestPoint(line, triangle, d, u, v);
   }
 
   // Tests if the given object is fully contained on the segment.
@@ -386,18 +409,23 @@ namespace glm {
   }
 
   template<length_t L, typename T, qualifier Q>
+  GLM_GEOM_QUALIFIER bool intersects(const LineSegment<L, T, Q> &lineSegment, const Triangle<L, T, Q> &triangle, T &d, T &u, T &v) {
+    return intersects(triangle, lineSegment, u, v, d);
+  }
+
+  template<length_t L, typename T, qualifier Q>
   GLM_GEOM_QUALIFIER bool intersects(const LineSegment<L, T, Q> &line, const LineSegment<L, T, Q> &other, T &d, T &d2, T eps = epsilon<T>()) {
     return distance(line, other, d, d2) <= eps;
   }
 
   template<length_t L, typename T, qualifier Q>
   GLM_GEOM_QUALIFIER bool intersects(const LineSegment<L, T, Q> &line, const AABB<L, T, Q> &aabb) {
-    return intersects(aabb, line);
+    return intersects(line, aabb);
   }
 
   template<length_t L, typename T, qualifier Q>
   GLM_GEOM_QUALIFIER bool intersects(const LineSegment<L, T, Q> &line, const Sphere<L, T, Q> &sphere) {
-    return intersects(sphere, line);
+    return intersects(line, sphere);
   }
 
   template<length_t L, typename T, qualifier Q>
@@ -417,7 +445,7 @@ namespace glm {
     template<glm::length_t L, typename T, qualifier Q>
     struct compute_to_string<LineSegment<L, T, Q>> {
       GLM_GEOM_QUALIFIER std::string call(const LineSegment<L, T, Q> &line) {
-        return detail::format("Segment(%s, %s)",
+        return detail::format("segment(%s, %s)",
           glm::to_string(line.a).c_str(),
           glm::to_string(line.b).c_str()
         );

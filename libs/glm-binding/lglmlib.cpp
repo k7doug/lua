@@ -106,6 +106,7 @@ static const luaL_Reg luaglm_lib[] = {
   { "aabb", GLM_NULLPTR },
   { "line", GLM_NULLPTR },
   { "ray", GLM_NULLPTR },
+  { "triangle", GLM_NULLPTR },
   { "segment", GLM_NULLPTR },
   { "sphere", GLM_NULLPTR },
   { "plane", GLM_NULLPTR },
@@ -135,6 +136,7 @@ extern "C" {
     luaL_newlib(L, luaglm_aabblib); lua_setfield(L, -2, "aabb");
     luaL_newlib(L, luaglm_linelib); lua_setfield(L, -2, "line");
     luaL_newlib(L, luaglm_raylib); lua_setfield(L, -2, "ray");
+    luaL_newlib(L, luaglm_trianglelib); lua_setfield(L, -2, "triangle");
     luaL_newlib(L, luaglm_segmentlib); lua_setfield(L, -2, "segment");
     luaL_newlib(L, luaglm_spherelib); lua_setfield(L, -2, "sphere");
     luaL_newlib(L, luaglm_planelib); lua_setfield(L, -2, "plane");

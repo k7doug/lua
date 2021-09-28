@@ -11,6 +11,7 @@
 #include "line.hpp"
 #include "linesegment.hpp"
 #include "ray.hpp"
+#include "triangle.hpp"
 
 namespace glm {
   /// <summary>
@@ -695,6 +696,11 @@ namespace glm {
   }
 
   template<length_t L, typename T, qualifier Q>
+  GLM_GEOM_QUALIFIER bool contains(const AABB<L, T, Q> &aabb, const Triangle<L, T, Q> &triangle) {
+    return contains(aabb, boundingAABB(triangle));
+  }
+
+  template<length_t L, typename T, qualifier Q>
   GLM_GEOM_QUALIFIER bool contains(const AABB<L, T, Q> &aabb, const Sphere<L, T, Q> &sphere) {
     const vec<L, T, Q> dir(sphere.r);
     return contains(aabb, sphere.pos - dir, sphere.pos + dir);
@@ -728,6 +734,11 @@ namespace glm {
   }
 
   template<length_t L, typename T, qualifier Q>
+  GLM_GEOM_QUALIFIER AABB<L, T, Q> enclose(const AABB<L, T, Q> &aabb, const Triangle<L, T, Q> &triangle) {
+    return enclose(aabb, min(triangle.a, triangle.b, triangle.c), max(triangle.a, triangle.b, triangle.c));
+  }
+
+  template<length_t L, typename T, qualifier Q>
   GLM_GEOM_QUALIFIER AABB<L, T, Q> enclose(const AABB<L, T, Q> &aabb, const Sphere<L, T, Q> &sphere) {
     const vec<L, T, Q> d(sphere.r);
     return enclose(aabb, sphere.pos - d, sphere.pos + d);
@@ -750,7 +761,7 @@ namespace glm {
   /// <param name="tFar">The distance to exit the AABB</param>
   template<length_t L, typename T, qualifier Q>
   GLM_GEOM_QUALIFIER bool intersectLineAABB(const AABB<L, T, Q> &aabb, const Line<L, T, Q> &line, T &tNear, T &tFar) {
-    for (length_t i = 0; i < L; ++i) { // test each cardinal plane
+    for (length_t i = 0; i < L; ++i) {  // test each cardinal plane
       if (!equal(line.dir[i], T(0), epsilon<T>())) {
         const T recipDir = T(1) / line.dir[i];
         const T t1 = (aabb.minPoint[i] - line.pos[i]) * recipDir;
@@ -831,12 +842,12 @@ namespace glm {
   /// <summary>
   /// GLM Convention: intersectLineAABB
   /// </summary>
-  template<glm::length_t L, typename T, qualifier Q>
+  template<length_t L, typename T, qualifier Q>
   GLM_GEOM_QUALIFIER bool intersects(const AABB<L, T, Q> &aabb, const Line<L, T, Q> &line, T &dNear, T &dFar) {
     return intersectLineAABB(aabb, line, dNear, dFar);
   }
 
-  template<glm::length_t L, typename T, qualifier Q>
+  template<length_t L, typename T, qualifier Q>
   GLM_GEOM_QUALIFIER bool intersects(const AABB<L, T, Q> &aabb, const Line<L, T, Q> &line) {
     T dNear = -std::numeric_limits<T>::infinity();
     T dFar = std::numeric_limits<T>::infinity();
@@ -846,19 +857,19 @@ namespace glm {
   /// <summary>
   /// GLM Convention: intersectRayAABB
   /// </summary>
-  template<glm::length_t L, typename T, qualifier Q>
+  template<length_t L, typename T, qualifier Q>
   GLM_GEOM_QUALIFIER bool intersects(const AABB<L, T, Q> &aabb, const Ray<L, T, Q> &ray, T &dNear, T &dFar) {
-    return intersectLineAABB(aabb, ray.toLine(), dNear, dFar);
+    return intersectLineAABB(aabb, toLine(ray), dNear, dFar);
   }
 
-  template<glm::length_t L, typename T, qualifier Q>
+  template<length_t L, typename T, qualifier Q>
   GLM_GEOM_QUALIFIER bool intersects(const AABB<L, T, Q> &aabb, const Ray<L, T, Q> &ray) {
     T dNear = T(0);
     T dFar = std::numeric_limits<T>::infinity();
     return intersects(aabb, ray, dNear, dFar);
   }
 
-  template<glm::length_t L, typename T, qualifier Q>
+  template<length_t L, typename T, qualifier Q>
   GLM_GEOM_QUALIFIER bool intersects(const AABB<L, T, Q> &aabb, const LineSegment<L, T, Q> &lineSegment, T &dNear, T &dFar) {
     const vec<L, T, Q> dir = lineSegment.dir2();
     const T len = length(dir);
@@ -872,7 +883,7 @@ namespace glm {
     return intersectLineAABB(aabb, line, dNear, dFar);
   }
 
-  template<glm::length_t L, typename T, qualifier Q>
+  template<length_t L, typename T, qualifier Q>
   GLM_GEOM_QUALIFIER bool intersects(const AABB<L, T, Q> &aabb, const LineSegment<L, T, Q> &lineSegment) {
     T near(0), far(0);
     return intersects(aabb, lineSegment, near, far);
@@ -889,13 +900,19 @@ namespace glm {
   template<length_t L, typename T, qualifier Q>
   GLM_GEOM_QUALIFIER bool intersects(const AABB<L, T, Q> &aabb, const Sphere<L, T, Q> &sphere) {
     const vec<L, T, Q> pt = closestPoint(aabb, sphere.pos);
-    return distance2(sphere.pos, pt) <= sphere.r * sphere.r; // + epsilon<T>() ?
+    return distance2(sphere.pos, pt) <= sphere.r * sphere.r;  // + epsilon<T>() ?
   }
 
   template<length_t L, typename T, qualifier Q>
   GLM_GEOM_QUALIFIER bool intersects(const AABB<L, T, Q> &aabb, const Plane<L, T, Q> &plane) {
     return intersects(plane, aabb);
   }
+
+  /// @TODO
+  // template<length_t L, typename T, qualifier Q>
+  // GLM_GEOM_QUALIFIER bool intersects(const AABB<L, T, Q> &aabb, const Triangle<L, T, Q> &triangle) {
+  //   return intersects(triangle, aabb);
+  // }
 
   /// <summary>
   /// Specializations
@@ -942,7 +959,7 @@ namespace glm {
     template<glm::length_t L, typename T, qualifier Q>
     struct compute_to_string<AABB<L, T, Q>> {
       GLM_GEOM_QUALIFIER std::string call(const AABB<L, T, Q> &aabb) {
-        return detail::format("AABB(%s, %s)",
+        return detail::format("aabb(%s, %s)",
           glm::to_string(aabb.minPoint).c_str(),
           glm::to_string(aabb.maxPoint).c_str()
         );

@@ -49,6 +49,7 @@ extern LUA_API_LINKAGE {
   #include "geom/line.hpp"
   #include "geom/linesegment.hpp"
   #include "geom/ray.hpp"
+  #include "geom/triangle.hpp"
   #include "geom/sphere.hpp"
   #include "geom/plane.hpp"
   #include "geom/polygon.hpp"
@@ -654,6 +655,22 @@ struct gLuaBase {
     Push(LB, r.pos);
     Push(LB, gm_drift(r.dir));
     return 2;
+  }
+
+  template<glm::length_t D, typename T>
+  LUA_TRAIT_QUALIFIER int Pull(const gLuaBase &LB, int idx_, glm::Triangle<D, T> &t) {
+    Pull(LB, idx_, t.a);
+    Pull(LB, idx_ + 1, t.b);
+    Pull(LB, idx_ + 2, t.c);
+    return 3;
+  }
+
+  template<glm::length_t D, typename T>
+  LUA_TRAIT_QUALIFIER int Push(gLuaBase &LB, const glm::Triangle<D, T> &t) {
+    Push(LB, t.a);
+    Push(LB, t.b);
+    Push(LB, t.c);
+    return 3;
   }
 
   template<glm::length_t D, typename T>
